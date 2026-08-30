@@ -48,6 +48,7 @@
                             <span>Enter your PDF here by</span><br><br>
                             <button type="button" class="pdfbutton" onclick="document.getElementById('pdfInput').click()">Choosing File</button><br><br>
                             <small>Only PDF files are allowed.</small>
+                            <span id="pdfFilename" class="pdf-filename"></span>
                         </div>
                     </div>
                 </div>
@@ -112,6 +113,10 @@
         });
         document.getElementById('indexed_on').addEventListener('change', function () {
             toggleOtherField('indexed_on', 'indexed_on_other');
+        });
+        document.getElementById('pdfInput').addEventListener('change', function () {
+            var label = document.getElementById('pdfFilename');
+            label.textContent = (this.files && this.files[0]) ? this.files[0].name : '';
         });
     </script>
 </body>

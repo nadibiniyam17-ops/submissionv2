@@ -10,6 +10,9 @@
 <body>
     <div class="login">
         <h2>Admin login</h2>
+        {% if user.is_authenticated %}
+            <p>You are signed in as <strong>{{ user.username }}</strong>. Submit this form to switch accounts.</p>
+        {% endif %}
         {% if error %}<div class="alert-error">{{ error }}</div>{% endif %}
         <form method="POST">
             {% csrf_token %}

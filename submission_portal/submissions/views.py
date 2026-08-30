@@ -6,6 +6,7 @@ from django.contrib.auth.decorators import login_required
 from django.contrib.auth import authenticate, login, logout
 from django.contrib.auth.password_validation import validate_password
 from django.core.exceptions import ValidationError
+from django.views.decorators.csrf import ensure_csrf_cookie
 
 
 def first_superuser():
@@ -24,6 +25,7 @@ def value_or_other(posted, custom):
     return posted
 
 
+@ensure_csrf_cookie
 def submit_paper(request):
     if request.method == 'POST':
         title = request.POST.get('title')
@@ -90,9 +92,6 @@ def setup_admin(request):
 
 
 def admin_login(request):
-    if request.user.is_authenticated:
-        return redirect('submission_list')
-
     if request.method == 'POST':
         user = request.POST.get('username')
         pwd = request.POST.get('password')

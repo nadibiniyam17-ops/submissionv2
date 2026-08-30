@@ -466,6 +466,20 @@ th{
 .other-input.is-visible {
     display: block;
 }
+
+.signed-in {
+    margin: 6px 0 0;
+    font-size: 14px;
+    color: #4b5563;
+}
+
+.pdf-filename {
+    display: block;
+    margin-top: 10px;
+    font-weight: 600;
+    color: #0369a1;
+    word-break: break-all;
+}
 @media (max-width: 768px) {
     body {
         padding: 12px;
