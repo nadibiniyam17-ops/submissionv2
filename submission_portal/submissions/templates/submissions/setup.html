@@ -11,7 +11,6 @@
     <div class="setup">
         {% if setup_locked %}
             <div class="setup-locked">
-                <div class="setup-locked-icon" aria-hidden="true"></div>
                 <h2>Setup is closed</h2>
                 <p>An admin account already exists, so this page can no longer create the first admin.</p>
                 <a href="{% url 'admin_login' %}" class="submitbutton">Go to login</a>
