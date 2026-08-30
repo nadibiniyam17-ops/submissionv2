@@ -29,13 +29,15 @@
             
                 <div class="form-group">
                     <label><i class="fa-solid fa-rectangle-list"></i> 2. Type of Article <span class="required">*</span></label>
-                    <select name="article_type" required>
+                    <select name="article_type" id="article_type" required>
                         <option value="" disabled selected>Select type of article</option>
                         <option value="Full length research paper">Full length research paper</option>
                         <option value="Review article">Review article</option>
                         <option value="Short communication">Short communication</option>
                         <option value="Case study">Case study</option>
+                        <option value="Other">Other</option>
                     </select>
+                    <input type="text" name="article_type_other" id="article_type_other" class="other-input" placeholder="Enter your article type" maxlength="100">
                 </div>
             
                 <div class="form-group">
@@ -59,7 +61,7 @@
             
                 <div class="form-group">
                     <label><i class="fa-solid fa-globe"></i> 8. Indexed On <span class="required">*</span></label>
-                    <select name="indexed_on" required>
+                    <select name="indexed_on" id="indexed_on" required>
                         <option value="" disabled selected>Select indexing source</option>
                         <option value="Scopus">Scopus</option>
                         <option value="Web of Science">Web of Science</option>
@@ -67,6 +69,7 @@
                         <option value="PubMed">PubMed</option>
                         <option value="Other">Other</option>
                     </select>
+                    <input type="text" name="indexed_on_other" id="indexed_on_other" class="other-input" placeholder="Enter your indexing source" maxlength="100">
                 </div>
             
                 <div class="form-group">
@@ -93,5 +96,23 @@
             <button type="submit" class="submitbutton"><i class="fa-solid fa-paper-plane"></i> SUBMIT</button>
         </form>
     </div>
+    <script>
+        function toggleOtherField(selectId, inputId) {
+            var select = document.getElementById(selectId);
+            var input = document.getElementById(inputId);
+            var show = select.value === 'Other';
+            input.classList.toggle('is-visible', show);
+            input.required = show;
+            if (!show) {
+                input.value = '';
+            }
+        }
+        document.getElementById('article_type').addEventListener('change', function () {
+            toggleOtherField('article_type', 'article_type_other');
+        });
+        document.getElementById('indexed_on').addEventListener('change', function () {
+            toggleOtherField('indexed_on', 'indexed_on_other');
+        });
+    </script>
 </body>
 </html>

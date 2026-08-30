@@ -89,7 +89,7 @@ input, select, textarea {
     min-width: 200px;
     text-align: center;
     border-left: 1px solid #ccc;
-    border-right: none;
+    border-right: 1px solid #ccc;
 }
 .droparea {
     border: 2px dashed #b4c6fc;
@@ -456,6 +456,15 @@ th{
     width: auto;
     min-width: 140px;
     margin-top: 0;
+}
+
+.other-input {
+    display: none;
+    margin-top: 8px;
+}
+
+.other-input.is-visible {
+    display: block;
 }
 @media (max-width: 768px) {
     body {

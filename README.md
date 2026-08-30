@@ -35,7 +35,9 @@ Open **http://127.0.0.1:8000/**
 | Admin login | http://127.0.0.1:8000/login/ |
 | Review dashboard | http://127.0.0.1:8000/dashboard/ |
 
-`/setup/` works only while no admin exists. After that, sign in at `/login/`.
+`/setup/` works only while no admin exists. After that it shows a closed page and you sign in at `/login/`. Only the **first** admin (the account created at `/setup/`) can add more admins from the dashboard. Later admins can review papers but cannot open **Add admin**.
+
+On the submit form, **Type of article** and **Indexed on** include an **Other** choice. Choosing it shows a text field for a custom article type or indexing source.
 
 Stop the server with `Ctrl+C`.
 

@@ -9,33 +9,41 @@
 </head>
 <body>
     <div class="setup">
-        <a href="{% url 'submission_list' %}" class="back-link">←Back to dashboard</a>
-        <h2>Add admin</h2>
-        <p>Create another admin account that can review submissions. Password must be at least 8 characters.</p>
+        {% if create_forbidden %}
+            <div class="setup-locked">
+                <h2>Not allowed</h2>
+                <p>Only the first admin can create another admin account.</p>
+                <a href="{% url 'submission_list' %}" class="submitbutton">Back to dashboard</a>
+            </div>
+        {% else %}
+            <a href="{% url 'submission_list' %}" class="back-link">←Back to dashboard</a>
+            <h2>Add admin</h2>
+            <p>Create another admin account that can review submissions. Password must be at least 8 characters.</p>
 
-        {% if error %}
-            <div class="alert-error">{{ error }}</div>
-        {% endif %}
-        {% if success %}
-            <div class="alert-success">{{ success }}</div>
-        {% endif %}
+            {% if error %}
+                <div class="alert-error">{{ error }}</div>
+            {% endif %}
+            {% if success %}
+                <div class="alert-success">{{ success }}</div>
+            {% endif %}
 
-        <form method="POST">
-            {% csrf_token %}
-            <div class="form-group">
-                <label>Username</label>
-                <input type="text" name="username" placeholder="Enter username" required>
-            </div>
-            <div class="form-group">
-                <label>Password</label>
-                <input type="password" name="password" placeholder="At least 8 characters" minlength="8" required>
-            </div>
-            <div class="form-group">
-                <label>Confirm password</label>
-                <input type="password" name="confirm" placeholder="Confirm password" minlength="8" required>
-            </div>
-            <button type="submit" class="submitbutton">Create admin</button>
-        </form>
+            <form method="POST">
+                {% csrf_token %}
+                <div class="form-group">
+                    <label>Username</label>
+                    <input type="text" name="username" placeholder="Enter username" required>
+                </div>
+                <div class="form-group">
+                    <label>Password</label>
+                    <input type="password" name="password" placeholder="At least 8 characters" minlength="8" required>
+                </div>
+                <div class="form-group">
+                    <label>Confirm password</label>
+                    <input type="password" name="confirm" placeholder="Confirm password" minlength="8" required>
+                </div>
+                <button type="submit" class="submitbutton">Create admin</button>
+            </form>
+        {% endif %}
     </div>
 </body>
 </html>

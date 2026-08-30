@@ -8,15 +8,37 @@ from django.contrib.auth.password_validation import validate_password
 from django.core.exceptions import ValidationError
 
 
+def first_superuser():
+    return User.objects.filter(is_superuser=True).order_by('pk').first()
+
+
+def user_is_first_admin(user):
+    first = first_superuser()
+    return bool(user.is_authenticated and first and user.pk == first.pk)
+
+
+def value_or_other(posted, custom):
+    if posted == 'Other':
+        custom = (custom or '').strip()
+        return custom if custom else 'Other'
+    return posted
+
+
 def submit_paper(request):
     if request.method == 'POST':
         title = request.POST.get('title')
-        article_type = request.POST.get('article_type')
+        article_type = value_or_other(
+            request.POST.get('article_type'),
+            request.POST.get('article_type_other'),
+        )
         author_number = request.POST.get('author_number', 1)
         author_names = request.POST.get('author_names')
         publication_date = request.POST.get('publication_date')
         doi = request.POST.get('doi', '')
-        indexed_on = request.POST.get('indexed_on')
+        indexed_on = value_or_other(
+            request.POST.get('indexed_on'),
+            request.POST.get('indexed_on_other'),
+        )
         source_of_funding = request.POST.get('source_of_funding')
         affiliations = request.POST.get('affiliations')
         pdf = request.FILES.get('pdf')
@@ -90,6 +112,11 @@ def admin_logout(request):
 
 @login_required(login_url='/login/')
 def create_admin(request):
+    if not user_is_first_admin(request.user):
+        return render(request, 'submissions/create_admin.html', {
+            'create_forbidden': True,
+        }, status=403)
+
     error = None
     success = None
 
@@ -143,6 +170,7 @@ def submission_list(request):
         'pending_count': all_subs.filter(status='pending').count(),
         'under_review_count': all_subs.filter(status='under_review').count(),
         'reviewed_count': all_subs.filter(status='reviewed').count(),
+        'can_create_admin': user_is_first_admin(request.user),
     }
     return render(request, 'submissions/list.html', context)
 

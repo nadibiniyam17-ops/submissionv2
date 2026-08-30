@@ -15,7 +15,9 @@
                 <p>An overview of all submissions</p>
             </div>
             <div class="overviewactions">
+                {% if can_create_admin %}
                 <a href="{% url 'create_admin' %}" class="addadminbutton"><strong>Add admin</strong></a>
+                {% endif %}
                 <a href="{% url 'admin_logout' %}" class="logoutbutton"><strong>Logout</strong></a>
             </div>
         </div>
