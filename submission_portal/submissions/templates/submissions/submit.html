@@ -1,0 +1,97 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="stylesheet" href="{% static 'fontawesome/css/all.min.css' %}">
+    <link rel="stylesheet" href="{% static 'css/style.css' %}">
+    <title>Research Paper Submission</title>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h2>Research paper submission</h2>
+            <p>Please fill out this form to submit your paper</p>
+        </div>
+        <form method="POST" enctype="multipart/form-data">
+            {% csrf_token %} 
+            <div class="form-grid">
+                <div class="form-group">
+                    <label><i class="fa-solid fa-file-lines"></i> 1. Title of the Paper <span class="required">*</span></label>
+                    <input type="text" name="title" placeholder="Enter the title of your paper" required>
+                </div>
+            
+                <div class="form-group">
+                    <label><i class="fa-solid fa-link"></i> 6. DOI (Digital Object Identifier)</label>
+                    <input type="text" name="doi" placeholder="Enter DOI (e.g. 10.1234/example.doi)">
+                </div>
+            
+                <div class="form-group">
+                    <label><i class="fa-solid fa-rectangle-list"></i> 2. Type of Article <span class="required">*</span></label>
+                    <select name="article_type" required>
+                        <option value="" disabled selected>Select type of article</option>
+                        <option value="Full length research paper">Full length research paper</option>
+                        <option value="Review article">Review article</option>
+                        <option value="Short communication">Short communication</option>
+                        <option value="Case study">Case study</option>
+                    </select>
+                </div>
+            
+                <div class="form-group">
+                    <label><i class="fa-solid fa-cloud-arrow-up"></i> 7. Upload PDF <span class="required">*</span></label>
+                    <div class="droparea" id="droparea">
+                        <input type="file" name="pdf" id="pdfInput" accept=".pdf" required>
+                        <div class="dropcontent">
+                            <span>Enter your PDF here by</span><br><br>
+                            <button type="button" class="pdfbutton" onclick="document.getElementById('pdfInput').click()">Choosing File</button><br><br>
+                            <small>Only PDF files are allowed.</small>
+                        </div>
+                    </div>
+                </div>
+            
+                <div class="form-group">
+                    <label><i class="fa-solid fa-users"></i> 3. Number of Authors <span class="required">*</span></label>
+                    <div class="counter-input">
+                        <input type="number" id="authornumber" name="author_number" value="1" min="1" required>
+                    </div>
+                </div>
+            
+                <div class="form-group">
+                    <label><i class="fa-solid fa-globe"></i> 8. Indexed On <span class="required">*</span></label>
+                    <select name="indexed_on" required>
+                        <option value="" disabled selected>Select indexing source</option>
+                        <option value="Scopus">Scopus</option>
+                        <option value="Web of Science">Web of Science</option>
+                        <option value="Nationally accredited">Nationally accredited</option>
+                        <option value="PubMed">PubMed</option>
+                        <option value="Other">Other</option>
+                    </select>
+                </div>
+            
+                <div class="form-group">
+                    <label><i class="fa-solid fa-user"></i> 4. Author Names <span class="required">*</span></label>
+                    <input type="text" name="author_names" placeholder="Enter all author names (e.g. John Doe; Jane Smith; ...)" required>
+                </div>
+            
+                <div class="form-group">
+                    <label><i class="fa-solid fa-dollar-sign"></i> 9. Source of Funding</label>
+                    <input type="text" name="source_of_funding" placeholder="Enter source of funding">
+                </div>
+            
+                <div class="form-group">
+                    <label><i class="fa-solid fa-calendar-days"></i> 5. Publication Date <span class="required">*</span></label>
+                    <input type="date" name="publication_date" required>
+                </div>
+            
+                <div class="form-group">
+                    <label><i class="fa-solid fa-building-columns"></i> 10. Affiliation</label>
+                    <input type="text" name="affiliations" placeholder="Enter affiliation (e.g. University, Department, Institution)">
+                </div>
+            </div>
+            
+            <button type="submit" class="submitbutton"><i class="fa-solid fa-paper-plane"></i> SUBMIT</button>
+        </form>
+    </div>
+</body>
+</html>

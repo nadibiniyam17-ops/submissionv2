@@ -1,0 +1,46 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="stylesheet" href="{% static 'css/style.css' %}">
+    <title>Submission detail</title>
+</head>
+<body>
+    <div class="submission_details">
+        <a href="{% url 'submission_list' %}" class="back-link">←Back to dashboard</a>
+        <h2>{{ submission.title }}</h2>
+        <hr>
+        <p><strong>Article type:</strong> {{ submission.article_type }}</p>
+        <p><strong>Number of authors:</strong> {{ submission.author_number }}</p>
+        <p><strong>Author names:</strong> {{ submission.author_names }}</p>
+        <p><strong>Publication date:</strong> {{ submission.publication_date }}</p>
+        <p><strong>DOI:</strong> {{ submission.doi }}</p>
+        <p><strong>Indexed on:</strong> {{ submission.indexed_on }}</p>
+        <p><strong>Source of funding:</strong> {{ submission.source_of_funding }}</p>
+        <p><strong>Affiliation:</strong> {{ submission.affiliations }}</p>
+
+        <form method="post" class="statusform">
+            {% csrf_token %}
+            <label for="status"><strong>Review status</strong></label>
+            <div class="statusrow">
+                <select name="status" id="status">
+                    <option value="pending" {% if submission.status == 'pending' %}selected{% endif %}>Pending</option>
+                    <option value="under_review" {% if submission.status == 'under_review' %}selected{% endif %}>Under review</option>
+                    <option value="reviewed" {% if submission.status == 'reviewed' %}selected{% endif %}>Reviewed</option>
+                </select>
+                <button type="submit" class="viewbutton">Save status</button>
+            </div>
+            <p class="statushint">
+                Current:
+                <span class="statusbadge status-{{ submission.status }}">{{ submission.get_status_display }}</span>
+            </p>
+        </form>
+
+        <div class="pdf">
+            <a href="{{ submission.pdf.url }}" target="_blank" class="submitbutton">View/Download the PDF</a>
+        </div>
+    </div>
+</body>
+</html>

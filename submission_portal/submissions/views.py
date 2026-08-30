@@ -1,0 +1,160 @@
+from django.shortcuts import render, redirect, get_object_or_404
+from django.db.models import Q
+from .models import Submission
+from django.contrib.auth.models import User
+from django.contrib.auth.decorators import login_required
+from django.contrib.auth import authenticate, login, logout
+from django.contrib.auth.password_validation import validate_password
+from django.core.exceptions import ValidationError
+from django.http import HttpResponseForbidden
+
+
+def submit_paper(request):
+    if request.method == 'POST':
+        title = request.POST.get('title')
+        article_type = request.POST.get('article_type')
+        author_number = request.POST.get('author_number', 1)
+        author_names = request.POST.get('author_names')
+        publication_date = request.POST.get('publication_date')
+        doi = request.POST.get('doi', '')
+        indexed_on = request.POST.get('indexed_on')
+        source_of_funding = request.POST.get('source_of_funding')
+        affiliations = request.POST.get('affiliations')
+        pdf = request.FILES.get('pdf')
+
+        submission = Submission.objects.create(
+            title=title,
+            article_type=article_type,
+            author_number=author_number,
+            author_names=author_names,
+            publication_date=publication_date,
+            doi=doi,
+            indexed_on=indexed_on,
+            source_of_funding=source_of_funding,
+            affiliations=affiliations,
+            pdf=pdf,
+            status='pending'
+        )
+        return redirect('submit_success', pk=submission.pk)
+
+    return render(request, 'submissions/submit.html')
+
+
+def submit_success(request, pk):
+    submission = get_object_or_404(Submission, pk=pk)
+    return render(request, 'submissions/submitted.html', {
+        'title': submission.title,
+    })
+
+
+def setup_admin(request):
+    if User.objects.filter(is_superuser=True).exists():
+        return HttpResponseForbidden("Setup disabled, Admin user already created.")
+
+    if request.method == 'POST':
+        username = request.POST.get('username')
+        password = request.POST.get('password')
+        try:
+            validate_password(password)
+        except ValidationError as exc:
+            return render(request, 'submissions/setup.html', {
+                'error': ' '.join(exc.messages),
+            })
+        User.objects.create_superuser(username=username, email='', password=password)
+        return redirect('admin_login')
+
+    return render(request, 'submissions/setup.html')
+
+
+def admin_login(request):
+    if request.user.is_authenticated:
+        return redirect('submission_list')
+
+    if request.method == 'POST':
+        user = request.POST.get('username')
+        pwd = request.POST.get('password')
+        account = authenticate(request, username=user, password=pwd)
+        if account is not None:
+            login(request, account)
+            return redirect('submission_list')
+        return render(request, 'submissions/login.html', {'error': 'Invalid credentials'})
+
+    return render(request, 'submissions/login.html')
+
+
+def admin_logout(request):
+    logout(request)
+    return redirect('admin_login')
+
+
+@login_required(login_url='/login/')
+def create_admin(request):
+    error = None
+    success = None
+
+    if request.method == 'POST':
+        username = request.POST.get('username', '').strip()
+        password = request.POST.get('password', '')
+        confirm = request.POST.get('confirm', '')
+
+        if not username or not password:
+            error = 'Username and password are required.'
+        elif password != confirm:
+            error = 'Passwords do not match.'
+        elif User.objects.filter(username=username).exists():
+            error = 'That username is already taken.'
+        else:
+            try:
+                validate_password(password)
+            except ValidationError as exc:
+                error = ' '.join(exc.messages)
+            else:
+                User.objects.create_superuser(username=username, email='', password=password)
+                success = f'Admin "{username}" was created.'
+
+    return render(request, 'submissions/create_admin.html', {
+        'error': error,
+        'success': success,
+    })
+
+
+@login_required(login_url='/login/')
+def submission_list(request):
+    q = request.GET.get('q', '').strip()
+    status = request.GET.get('status', '').strip()
+
+    submissions = Submission.objects.all().order_by('-created_at')
+    if q:
+        submissions = submissions.filter(
+            Q(title__icontains=q) |
+            Q(author_names__icontains=q) |
+            Q(doi__icontains=q)
+        )
+    if status in ['pending', 'under_review', 'reviewed']:
+        submissions = submissions.filter(status=status)
+
+    all_subs = Submission.objects.all()
+    context = {
+        'submissions': submissions,
+        'q': q,
+        'status': status,
+        'total_count': all_subs.count(),
+        'pending_count': all_subs.filter(status='pending').count(),
+        'under_review_count': all_subs.filter(status='under_review').count(),
+        'reviewed_count': all_subs.filter(status='reviewed').count(),
+    }
+    return render(request, 'submissions/list.html', context)
+
+
+@login_required(login_url='/login/')
+def submission_detail(request, pk):
+    submission = get_object_or_404(Submission, pk=pk)
+
+    if request.method == 'POST':
+        new_status = request.POST.get('status')
+        if new_status in ['pending', 'under_review', 'reviewed']:
+            submission.status = new_status
+            submission.save()
+            return redirect('submission_detail', pk=pk)
+
+    return render(request, 'submissions/detail.html', {'submission': submission})

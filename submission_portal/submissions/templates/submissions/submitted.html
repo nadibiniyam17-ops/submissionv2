@@ -1,0 +1,19 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="stylesheet" href="{% static 'fontawesome/css/all.min.css' %}">
+    <link rel="stylesheet" href="{% static 'css/style.css' %}">
+    <title>Submitted successfully</title>
+</head>
+<body>
+    <div class="successpage">
+        <i class="fa-solid fa-circle-check successtick"></i>
+        <h1 class="successtitle">Submitted successfully</h1>
+        <p class="successmessage">Your paper <strong>{{ title }}</strong> has been received and is pending review.</p>
+        <a href="{% url 'submit_paper' %}" class="submitbutton">Submit another paper</a>
+    </div>
+</body>
+</html>

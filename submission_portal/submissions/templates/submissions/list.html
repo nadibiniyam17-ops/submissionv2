@@ -1,0 +1,93 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="stylesheet" href="{% static 'css/style.css' %}">
+    <title>Admin dashboard</title>
+</head>
+<body>
+    <div class="admin_dashboard">
+        <div class="overview">
+            <div>
+                <h1>Submissions</h1>
+                <p>An overview of all submissions</p>
+            </div>
+            <div class="overviewactions">
+                <a href="{% url 'create_admin' %}" class="addadminbutton"><strong>Add admin</strong></a>
+                <a href="{% url 'admin_logout' %}" class="logoutbutton"><strong>Logout</strong></a>
+            </div>
+        </div>
+
+        <div class="allstats">
+            <a href="{% url 'submission_list' %}" class="stats {% if not status %}statactive{% endif %}">
+                <div class="statnum">{{ total_count }}</div>
+                <div class="statname">Total submissions</div>
+            </a>
+            <a href="?status=pending{% if q %}&q={{ q }}{% endif %}" class="stats {% if status == 'pending' %}statactive{% endif %}">
+                <div class="statnum text-purple">{{ pending_count }}</div>
+                <div class="statname">Pending</div>
+            </a>
+            <a href="?status=under_review{% if q %}&q={{ q }}{% endif %}" class="stats {% if status == 'under_review' %}statactive{% endif %}">
+                <div class="statnum text-orange">{{ under_review_count }}</div>
+                <div class="statname">Under review</div>
+            </a>
+            <a href="?status=reviewed{% if q %}&q={{ q }}{% endif %}" class="stats {% if status == 'reviewed' %}statactive{% endif %}">
+                <div class="statnum text-green">{{ reviewed_count }}</div>
+                <div class="statname">Reviewed</div>
+            </a>
+        </div>
+
+        <form method="get" class="searchbar">
+            <input type="text" name="q" value="{{ q }}" placeholder="Search title, author, or DOI">
+            <select name="status">
+                <option value="">All statuses</option>
+                <option value="pending" {% if status == 'pending' %}selected{% endif %}>Pending</option>
+                <option value="under_review" {% if status == 'under_review' %}selected{% endif %}>Under review</option>
+                <option value="reviewed" {% if status == 'reviewed' %}selected{% endif %}>Reviewed</option>
+            </select>
+            <button type="submit" class="viewbutton">Filter</button>
+            {% if q or status %}
+                <a href="{% url 'submission_list' %}" class="clearfilter">Clear</a>
+            {% endif %}
+        </form>
+
+        <div class="table">
+            <table>
+                <thead>
+                    <tr>
+                        <th>#</th>
+                        <th>Title</th>
+                        <th>Article type</th>
+                        <th>Indexed on</th>
+                        <th>Status</th>
+                        <th class="viewcell">Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for paper in submissions %}
+                    <tr>
+                        <td>{{ forloop.counter }}</td>
+                        <td class="bold">{{ paper.title }}</td>
+                        <td>{{ paper.article_type }}</td>
+                        <td><span class="badge">{{ paper.indexed_on }}</span></td>
+                        <td>
+                            <span class="statusbadge status-{{ paper.status }}">
+                                {{ paper.get_status_display }}
+                            </span>
+                        </td>
+                        <td class="viewcell"><a href="{% url 'submission_detail' paper.id %}" class="viewbutton">View</a></td>
+                    </tr>
+                    {% empty %}
+                    <tr>
+                        <td colspan="6" class="emptysubmissions">No submissions</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+</body>
+</html>
