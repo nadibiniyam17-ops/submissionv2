@@ -6,7 +6,6 @@ from django.contrib.auth.decorators import login_required
 from django.contrib.auth import authenticate, login, logout
 from django.contrib.auth.password_validation import validate_password
 from django.core.exceptions import ValidationError
-from django.http import HttpResponseForbidden
 
 
 def submit_paper(request):
@@ -49,7 +48,9 @@ def submit_success(request, pk):
 
 def setup_admin(request):
     if User.objects.filter(is_superuser=True).exists():
-        return HttpResponseForbidden("Setup disabled, Admin user already created.")
+        return render(request, 'submissions/setup.html', {
+            'setup_locked': True,
+        }, status=403)
 
     if request.method == 'POST':
         username = request.POST.get('username')

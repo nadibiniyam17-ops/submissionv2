@@ -9,23 +9,32 @@
 </head>
 <body>
     <div class="setup">
-        <h2>Admin setup</h2>
-        <p>Create the first admin account. This page will only be useable until the first account is created. Password must be at least 8 characters.</p>
-        {% if error %}
-            <div class="alert-error">{{ error }}</div>
+        {% if setup_locked %}
+            <div class="setup-locked">
+                <div class="setup-locked-icon" aria-hidden="true"></div>
+                <h2>Setup is closed</h2>
+                <p>An admin account already exists, so this page can no longer create the first admin.</p>
+                <a href="{% url 'admin_login' %}" class="submitbutton">Go to login</a>
+            </div>
+        {% else %}
+            <h2>Admin setup</h2>
+            <p>Create the first admin account. This page will only be useable until the first account is created. Password must be at least 8 characters.</p>
+            {% if error %}
+                <div class="alert-error">{{ error }}</div>
+            {% endif %}
+            <form method="POST">
+                {% csrf_token %}
+                <div class="form-group">
+                    <label>Username</label>
+                    <input type="text" name="username" placeholder="Enter your username" required>
+                </div>
+                <div class="form-group">
+                    <label>Password</label>
+                    <input type="password" name="password" placeholder="At least 8 characters" minlength="8" required>
+                </div>
+                <button type="submit" class="submitbutton">Create admin</button>
+            </form>
         {% endif %}
-        <form method="POST">
-            {% csrf_token %}
-            <div class="form-group">
-                <label>Username</label>
-                <input type="text" name="username" placeholder="Enter your username" required>
-            </div>
-            <div class="form-group">
-                <label>Password</label>
-                <input type="password" name="password" placeholder="At least 8 characters" minlength="8" required>
-            </div>
-            <button type="submit" class="submitbutton">Create admin</button>
-        </form>
     </div>
 </body>
 </html>
