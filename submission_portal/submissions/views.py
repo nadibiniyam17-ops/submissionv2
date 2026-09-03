@@ -70,6 +70,7 @@ def submit_success(request, pk):
     })
 
 
+@ensure_csrf_cookie
 def setup_admin(request):
     if User.objects.filter(is_superuser=True).exists():
         return render(request, 'submissions/setup.html', {
@@ -91,6 +92,7 @@ def setup_admin(request):
     return render(request, 'submissions/setup.html')
 
 
+@ensure_csrf_cookie
 def admin_login(request):
     if request.method == 'POST':
         user = request.POST.get('username')
@@ -110,6 +112,7 @@ def admin_logout(request):
 
 
 @login_required(login_url='/login/')
+@ensure_csrf_cookie
 def create_admin(request):
     if not user_is_first_admin(request.user):
         return render(request, 'submissions/create_admin.html', {
@@ -146,11 +149,13 @@ def create_admin(request):
 
 
 @login_required(login_url='/login/')
+@ensure_csrf_cookie
 def submission_list(request):
     q = request.GET.get('q', '').strip()
     status = request.GET.get('status', '').strip()
 
-    submissions = Submission.objects.all().order_by('-created_at')
+    # Show oldest submissions first so the list order matches PK order (1,2,3,...).
+    submissions = Submission.objects.all().order_by('pk')
     if q:
         submissions = submissions.filter(
             Q(title__icontains=q) |
@@ -175,6 +180,7 @@ def submission_list(request):
 
 
 @login_required(login_url='/login/')
+@ensure_csrf_cookie
 def submission_detail(request, pk):
     submission = get_object_or_404(Submission, pk=pk)
 

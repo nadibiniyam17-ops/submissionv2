@@ -23,11 +23,6 @@
                 </div>
             
                 <div class="form-group">
-                    <label><i class="fa-solid fa-link"></i> 6. DOI (Digital Object Identifier)</label>
-                    <input type="text" name="doi" placeholder="Enter DOI (e.g. 10.1234/example.doi)">
-                </div>
-            
-                <div class="form-group">
                     <label><i class="fa-solid fa-rectangle-list"></i> 2. Type of Article <span class="required">*</span></label>
                     <select name="article_type" id="article_type" required>
                         <option value="" disabled selected>Select type of article</option>
@@ -41,6 +36,28 @@
                 </div>
             
                 <div class="form-group">
+                    <label><i class="fa-solid fa-users"></i> 3. Number of Authors <span class="required">*</span></label>
+                    <div class="counter-input">
+                        <input type="number" id="authornumber" name="author_number" value="1" min="1" required>
+                    </div>
+                </div>
+            
+                <div class="form-group">
+                    <label><i class="fa-solid fa-user"></i> 4. Author Names <span class="required">*</span></label>
+                    <input type="text" name="author_names" placeholder="Enter all author names (e.g. John Doe; Jane Smith; ...)" required>
+                </div>
+            
+                <div class="form-group">
+                    <label><i class="fa-solid fa-calendar-days"></i> 5. Publication Date <span class="required">*</span></label>
+                    <input type="date" name="publication_date" required>
+                </div>
+            
+                <div class="form-group">
+                    <label><i class="fa-solid fa-link"></i> 6. DOI (Digital Object Identifier)</label>
+                    <input type="text" name="doi" placeholder="Enter DOI (e.g. 10.1234/example.doi)">
+                </div>
+            
+                <div class="form-group">
                     <label><i class="fa-solid fa-cloud-arrow-up"></i> 7. Upload PDF <span class="required">*</span></label>
                     <div class="droparea" id="droparea">
                         <input type="file" name="pdf" id="pdfInput" accept=".pdf" required>
@@ -50,13 +67,6 @@
                             <small>Only PDF files are allowed.</small>
                             <span id="pdfFilename" class="pdf-filename"></span>
                         </div>
-                    </div>
-                </div>
-            
-                <div class="form-group">
-                    <label><i class="fa-solid fa-users"></i> 3. Number of Authors <span class="required">*</span></label>
-                    <div class="counter-input">
-                        <input type="number" id="authornumber" name="author_number" value="1" min="1" required>
                     </div>
                 </div>
             
@@ -74,18 +84,8 @@
                 </div>
             
                 <div class="form-group">
-                    <label><i class="fa-solid fa-user"></i> 4. Author Names <span class="required">*</span></label>
-                    <input type="text" name="author_names" placeholder="Enter all author names (e.g. John Doe; Jane Smith; ...)" required>
-                </div>
-            
-                <div class="form-group">
                     <label><i class="fa-solid fa-dollar-sign"></i> 9. Source of Funding</label>
                     <input type="text" name="source_of_funding" placeholder="Enter source of funding">
-                </div>
-            
-                <div class="form-group">
-                    <label><i class="fa-solid fa-calendar-days"></i> 5. Publication Date <span class="required">*</span></label>
-                    <input type="date" name="publication_date" required>
                 </div>
             
                 <div class="form-group">
