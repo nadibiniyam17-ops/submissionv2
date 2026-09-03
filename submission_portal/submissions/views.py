@@ -157,7 +157,6 @@ def submission_list(request):
     q = request.GET.get('q', '').strip()
     status = request.GET.get('status', '').strip()
 
-    # Show oldest submissions first so the list order matches PK order (1,2,3,...).
     submissions = Submission.objects.all().order_by('pk')
     if q:
         submissions = submissions.filter(
