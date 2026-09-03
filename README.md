@@ -6,7 +6,7 @@ You need **Python 3.12 or newer**.
 
 ## Run it (PowerShell)
 
-From the folder that contains `requirements.txt` and `submission_portal`:
+Stay in the **project root** (the folder that contains `requirements.txt` and `submission_portal`). Do not `cd` into `submission_portal` until the steps below say so — `requirements.txt` and `venv` live in the root, not inside `submission_portal`.
 
 ```powershell
 python -m venv venv
@@ -18,6 +18,8 @@ python manage.py migrate
 python manage.py runserver
 ```
 
+After `Activate.ps1`, the prompt should start with `(venv)`. If it does not, Django is not available and you will get `No module named 'django'`.
+
 If activation fails with an execution-policy error:
 
 ```powershell
@@ -25,6 +27,15 @@ Set-ExecutionPolicy -Scope CurrentUser RemoteSigned
 ```
 
 Then run `.\venv\Scripts\Activate.ps1` again.
+
+You can skip activation and call the venv Python directly (from the project root):
+
+```powershell
+.\venv\Scripts\python.exe -m pip install -r requirements.txt
+cd submission_portal
+..\venv\Scripts\python.exe manage.py migrate
+..\venv\Scripts\python.exe manage.py runserver
+```
 
 Open **http://127.0.0.1:8000/**
 
@@ -40,6 +51,33 @@ Open **http://127.0.0.1:8000/**
 On the submit form, **Type of article** and **Indexed on** include an **Other** choice. Choosing it shows a text field for a custom article type or indexing source.
 
 Stop the server with `Ctrl+C`.
+
+### If it does not start
+
+**`No module named 'django'` / forgot to activate a virtual environment**
+
+You ran `python manage.py runserver` with the system Python instead of the venv. From the **project root**:
+
+```powershell
+.\venv\Scripts\Activate.ps1
+cd submission_portal
+python manage.py runserver
+```
+
+If `venv` does not exist yet, create it first with `python -m venv venv` and `pip install -r requirements.txt` (from the project root).
+
+**`Could not open requirements file: requirements.txt`**
+
+You are inside `submission_portal`. Go up one folder:
+
+```powershell
+cd ..
+pip install -r requirements.txt
+```
+
+**`pip` cannot reach pypi.org / `getaddrinfo failed`**
+
+That is a network or DNS problem, not a Django problem. Fix internet access, then install from the project root with the venv activated. Do not `pip install django` into system Python.
 
 ### Already cloned from GitHub?
 
