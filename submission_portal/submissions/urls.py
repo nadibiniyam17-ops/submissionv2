@@ -8,6 +8,7 @@ urlpatterns = [
     path('logout/', views.admin_logout, name='admin_logout'),
     path('dashboard/', views.submission_list, name='submission_list'),
     path('dashboard/detail/<int:pk>/', views.submission_detail, name='submission_detail'),
+    path('dashboard/detail/<int:pk>/pdf/', views.download_pdf, name='download_pdf'),
     path('dashboard/admins/create/', views.create_admin, name='create_admin'),
     path('submitted/<int:pk>/', views.submit_success, name='submit_success'),
 ]

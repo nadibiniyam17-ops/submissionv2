@@ -38,9 +38,11 @@
             </p>
         </form>
 
+        {% if submission.pdf %}
         <div class="pdf">
-            <a href="{{ submission.pdf.url }}" target="_blank" class="submitbutton">View/Download the PDF</a>
+            <a href="{% url 'download_pdf' submission.pk %}" target="_blank" class="submitbutton">View/Download the PDF</a>
         </div>
+        {% endif %}
     </div>
 </body>
 </html>

@@ -1,5 +1,8 @@
+import os
+
 from django.shortcuts import render, redirect, get_object_or_404
 from django.db.models import Q
+from django.http import FileResponse, Http404
 from .models import Submission
 from django.contrib.auth.models import User
 from django.contrib.auth.decorators import login_required
@@ -192,3 +195,16 @@ def submission_detail(request, pk):
             return redirect('submission_detail', pk=pk)
 
     return render(request, 'submissions/detail.html', {'submission': submission})
+
+
+@login_required(login_url='/login/')
+def download_pdf(request, pk):
+    submission = get_object_or_404(Submission, pk=pk)
+    if not submission.pdf:
+        raise Http404("No PDF for this submission.")
+    return FileResponse(
+        submission.pdf.open('rb'),
+        as_attachment=False,
+        filename=os.path.basename(submission.pdf.name),
+        content_type='application/pdf',
+    )
