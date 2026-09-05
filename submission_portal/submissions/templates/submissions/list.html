@@ -43,7 +43,7 @@
         </div>
 
         <form method="get" class="searchbar">
-            <input type="text" name="q" value="{{ q }}" placeholder="Search title, author, or DOI">
+            <input type="text" name="q" value="{{ q }}" placeholder="Search title, author, DOI, or tracking code">
             <select name="status">
                 <option value="">All statuses</option>
                 <option value="pending" {% if status == 'pending' %}selected{% endif %}>Pending</option>
@@ -62,6 +62,7 @@
                     <tr>
                         <th>#</th>
                         <th>Title</th>
+                        <th>Tracking code</th>
                         <th>Article type</th>
                         <th>Indexed on</th>
                         <th>Status</th>
@@ -73,6 +74,7 @@
                     <tr>
                         <td>{{ forloop.counter }}</td>
                         <td class="bold">{{ paper.title }}</td>
+                        <td class="tracking-cell">{{ paper.tracking_code }}</td>
                         <td>{{ paper.article_type }}</td>
                         <td><span class="badge">{{ paper.indexed_on }}</span></td>
                         <td>
@@ -84,7 +86,7 @@
                     </tr>
                     {% empty %}
                     <tr>
-                        <td colspan="6" class="emptysubmissions">No submissions</td>
+                        <td colspan="7" class="emptysubmissions">No submissions</td>
                     </tr>
                     {% endfor %}
                 </tbody>

@@ -13,7 +13,15 @@
         <i class="fa-solid fa-circle-check successtick"></i>
         <h1 class="successtitle">Submitted successfully</h1>
         <p class="successmessage">Your paper <strong>{{ title }}</strong> has been received and is pending review.</p>
-        <a href="{% url 'submit_paper' %}" class="submitbutton">Submit another paper</a>
+        <div class="tracking-box">
+            <p class="tracking-label">Your tracking code</p>
+            <p class="tracking-code">{{ tracking_code }}</p>
+            <p class="tracking-hint">Save this code. You will need it to check your paper’s status.</p>
+        </div>
+        <div class="success-actions">
+            <a href="{% url 'check_status' %}" class="submitbutton">Check status</a>
+            <a href="{% url 'submit_paper' %}" class="submitbutton submitbutton-secondary">Submit another paper</a>
+        </div>
     </div>
 </body>
 </html>

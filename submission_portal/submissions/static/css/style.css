@@ -51,6 +51,30 @@ input, select, textarea, button {
     border-radius: 12px;
     box-shadow: 0 4px 12px rgba(0,0,0,0.05);
 }
+.header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: 16px;
+    margin-bottom: 8px;
+}
+.header p {
+    margin: 0;
+    color: #4b5563;
+}
+.status-link {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    height: 40px;
+    padding: 0 16px;
+    background: #3b82f6;
+    color: white;
+    text-decoration: none;
+    font-weight: 600;
+    border-radius: 6px;
+}
 .form-grid {
     display: grid;
     grid-template-columns: 1fr 1fr;
@@ -288,6 +312,92 @@ th{
     min-width: 200px;
     padding: 12px 24px;
 }
+
+.tracking-box {
+    margin: 0 0 28px;
+    padding: 16px;
+    background: #f8fafc;
+    border-radius: 8px;
+}
+
+.tracking-label {
+    margin: 0 0 8px;
+    font-size: 14px;
+    font-weight: 600;
+    color: #4b5563;
+}
+
+.tracking-code {
+    margin: 0 0 8px;
+    font-family: ui-monospace, Consolas, monospace;
+    font-size: 28px;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    color: #111827;
+}
+
+.tracking-hint {
+    margin: 0;
+    font-size: 14px;
+    color: #4b5563;
+    line-height: 1.45;
+}
+
+.success-actions {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 12px;
+}
+
+.success-actions .submitbutton {
+    margin-top: 0;
+}
+
+.submitbutton-secondary {
+    background: white;
+    color: #3b82f6;
+    border: 1px solid #3b82f6;
+}
+
+.status-intro {
+    margin: 0 0 18px;
+    color: #4b5563;
+    line-height: 1.45;
+}
+
+.status-result {
+    margin-top: 24px;
+    padding: 16px;
+    background: #f8fafc;
+    border-radius: 8px;
+    text-align: center;
+}
+
+.status-result-title {
+    margin: 0 0 10px;
+    font-weight: 700;
+    color: #111827;
+}
+
+.status-nav {
+    margin: 18px 0 0;
+    text-align: center;
+    font-size: 14px;
+}
+
+.status-nav a {
+    color: #3b82f6;
+    font-weight: 600;
+    text-decoration: none;
+}
+
+.tracking-cell,
+.tracking-code-inline {
+    font-family: ui-monospace, Consolas, monospace;
+    font-weight: 600;
+    letter-spacing: 0.04em;
+}
 .viewbutton {
     width: 100px;
     padding: 12px;
@@ -499,6 +609,16 @@ th{
         padding: 20px 16px;
     }
 
+    .header {
+        flex-direction: column;
+        align-items: stretch;
+    }
+
+    .status-link {
+        width: 100%;
+        min-height: 44px;
+    }
+
     .submission_details,
     .login,
     .setup,
@@ -583,7 +703,7 @@ th{
     }
 
     table {
-        min-width: 640px;
+        min-width: 760px;
     }
 
     th, td {
@@ -643,6 +763,14 @@ th{
     .successpage .submitbutton {
         width: 100%;
         min-width: 0;
+    }
+
+    .success-actions {
+        flex-direction: column;
+    }
+
+    .tracking-code {
+        font-size: 22px;
     }
 }
 

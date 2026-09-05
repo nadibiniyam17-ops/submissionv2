@@ -42,9 +42,12 @@ Open **http://127.0.0.1:8000/**
 | Page | URL |
 |------|-----|
 | Submit a paper | http://127.0.0.1:8000/ |
+| Check submission status | http://127.0.0.1:8000/status/ |
 | Create the first admin | http://127.0.0.1:8000/setup/ |
 | Admin login | http://127.0.0.1:8000/login/ |
 | Review dashboard | http://127.0.0.1:8000/dashboard/ |
+
+After you submit a paper, the success page shows a **tracking code** (for example `RS-8F3K2P`). Save it. Open `/status/` and enter that code to see whether the paper is pending, under review, or reviewed. If someone loses their code, an admin can look it up on the dashboard.
 
 `/setup/` works only while no admin exists. After that it shows a closed page and you sign in at `/login/`. Only the **first** admin (the account created at `/setup/`) can add more admins from the dashboard. Later admins can review papers but cannot open **Add admin**.
 

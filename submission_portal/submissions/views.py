@@ -3,7 +3,7 @@ import os
 from django.shortcuts import render, redirect, get_object_or_404
 from django.db.models import Q
 from django.http import FileResponse, Http404
-from .models import Submission
+from .models import Submission, normalize_tracking_code
 from django.contrib.auth.models import User
 from django.contrib.auth.decorators import login_required
 from django.contrib.auth import authenticate, login, logout
@@ -70,6 +70,29 @@ def submit_success(request, pk):
     submission = get_object_or_404(Submission, pk=pk)
     return render(request, 'submissions/submitted.html', {
         'title': submission.title,
+        'tracking_code': submission.tracking_code,
+    })
+
+
+@ensure_csrf_cookie
+def check_status(request):
+    submission = None
+    error = None
+    tracking_code = ''
+
+    if request.method == 'POST':
+        tracking_code = normalize_tracking_code(request.POST.get('tracking_code'))
+        if not tracking_code:
+            error = 'Enter your tracking code.'
+        else:
+            submission = Submission.objects.filter(tracking_code=tracking_code).first()
+            if submission is None:
+                error = 'No submission found for that code.'
+
+    return render(request, 'submissions/status.html', {
+        'submission': submission,
+        'error': error,
+        'tracking_code': tracking_code,
     })
 
 
@@ -162,7 +185,8 @@ def submission_list(request):
         submissions = submissions.filter(
             Q(title__icontains=q) |
             Q(author_names__icontains=q) |
-            Q(doi__icontains=q)
+            Q(doi__icontains=q) |
+            Q(tracking_code__icontains=q)
         )
     if status in ['pending', 'under_review', 'reviewed']:
         submissions = submissions.filter(status=status)

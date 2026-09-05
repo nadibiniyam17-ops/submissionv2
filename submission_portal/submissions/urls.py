@@ -11,4 +11,5 @@ urlpatterns = [
     path('dashboard/detail/<int:pk>/pdf/', views.download_pdf, name='download_pdf'),
     path('dashboard/admins/create/', views.create_admin, name='create_admin'),
     path('submitted/<int:pk>/', views.submit_success, name='submit_success'),
+    path('status/', views.check_status, name='check_status'),
 ]

@@ -11,8 +11,11 @@
 <body>
     <div class="container">
         <div class="header">
-            <h2>Research paper submission</h2>
-            <p>Please fill out this form to submit your paper</p>
+            <div>
+                <h2>Research paper submission</h2>
+                <p>Please fill out this form to submit your paper</p>
+            </div>
+            <a href="{% url 'check_status' %}" class="status-link">Check status</a>
         </div>
         <form method="POST" enctype="multipart/form-data">
             {% csrf_token %} 
