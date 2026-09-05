@@ -33,6 +33,9 @@ CSRF_TRUSTED_ORIGINS = [
     'http://localhost:8000',
 ]
 
+# Shown on the submit page as the check-status link. Change this when you deploy.
+PUBLIC_BASE_URL = os.environ.get('PUBLIC_BASE_URL', 'http://127.0.0.1:8000').rstrip('/')
+
 
 # Application definition
 
@@ -125,7 +128,7 @@ USE_TZ = True
 # https://docs.djangoproject.com/en/6.1/howto/static-files/
 
 STATIC_URL = 'static/'
-
+STATIC_ROOT = BASE_DIR / 'staticfiles'
 
 MEDIA_URL = '/media/'
 MEDIA_ROOT = os.path.join(BASE_DIR, 'media')

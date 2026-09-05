@@ -14,7 +14,6 @@
             <h2>Research paper submission</h2>
             <p>Please fill out this form to submit your paper</p>
         </div>
-        <p class="status-note">You can check the status of your paper at <a href="{% url 'check_status' %}">{{ status_check_url }}</a>.</p>
         <form method="POST" enctype="multipart/form-data">
             {% csrf_token %} 
             <div class="form-grid">
@@ -98,6 +97,7 @@
             <button type="submit" class="submitbutton"><i class="fa-solid fa-paper-plane"></i> SUBMIT</button>
         </form>
     </div>
+    <p class="status-note">You can check the status of your paper at <a href="{% url 'check_status' %}">{{ status_check_url }}</a>.</p>
     <script>
         function toggleOtherField(selectId, inputId) {
             var select = document.getElementById(selectId);

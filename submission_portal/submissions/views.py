@@ -1,5 +1,6 @@
 import os
 
+from django.conf import settings
 from django.shortcuts import render, redirect, get_object_or_404
 from django.db.models import Q
 from django.http import FileResponse, Http404
@@ -30,7 +31,7 @@ def value_or_other(posted, custom):
 
 
 def status_page_url(request):
-    return request.build_absolute_uri(reverse('check_status'))
+    return f"{settings.PUBLIC_BASE_URL}{reverse('check_status')}"
 
 
 @ensure_csrf_cookie
