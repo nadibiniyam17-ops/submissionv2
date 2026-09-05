@@ -12,6 +12,7 @@
         <a href="{% url 'submission_list' %}" class="back-link">←Back to dashboard</a>
         <h2>{{ submission.title }}</h2>
         <hr>
+        <p><strong>Tracking code:</strong> <span class="tracking-code-inline">{{ submission.tracking_code }}</span></p>
         <p><strong>Article type:</strong> {{ submission.article_type }}</p>
         <p><strong>Number of authors:</strong> {{ submission.author_number }}</p>
         <p><strong>Author names:</strong> {{ submission.author_names }}</p>

@@ -1,0 +1,35 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="stylesheet" href="{% static 'css/style.css' %}">
+    <title>Check submission status</title>
+</head>
+<body>
+    <div class="login">
+        <h2>Check status</h2>
+        <p class="status-intro">Enter the tracking code you received when you submitted your paper.</p>
+        {% if error %}<div class="alert-error">{{ error }}</div>{% endif %}
+        <form method="POST">
+            {% csrf_token %}
+            <div class="form-group">
+                <label>Tracking code</label>
+                <input type="text" name="tracking_code" value="{{ tracking_code }}" placeholder="e.g. RS-8F3K2P" required>
+            </div>
+            <button type="submit" class="submitbutton">Check status</button>
+        </form>
+        {% if submission %}
+        <div class="status-result">
+            <p class="status-result-title">{{ submission.title }}</p>
+            <p>
+                Status:
+                <span class="statusbadge status-{{ submission.status }}">{{ submission.get_status_display }}</span>
+            </p>
+        </div>
+        {% endif %}
+        <p class="status-nav"><a href="{% url 'submit_paper' %}">Back to submit a paper</a></p>
+    </div>
+</body>
+</html>
