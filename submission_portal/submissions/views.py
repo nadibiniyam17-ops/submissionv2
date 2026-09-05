@@ -1,17 +1,30 @@
 import os
+from functools import wraps
 
 from django.conf import settings
-from django.shortcuts import render, redirect, get_object_or_404
-from django.db.models import Q
-from django.http import FileResponse, Http404
-from django.urls import reverse
-from .models import Submission, normalize_tracking_code
-from django.contrib.auth.models import User
-from django.contrib.auth.decorators import login_required
 from django.contrib.auth import authenticate, login, logout
+from django.contrib.auth.decorators import login_required
+from django.contrib.auth.models import User
 from django.contrib.auth.password_validation import validate_password
 from django.core.exceptions import ValidationError
+from django.core.paginator import Paginator
+from django.db.models import Q
+from django.http import FileResponse, Http404
+from django.shortcuts import get_object_or_404, redirect, render
+from django.urls import reverse
+from django.utils import timezone
+from django.utils.http import url_has_allowed_host_and_scheme
 from django.views.decorators.csrf import ensure_csrf_cookie
+from django.views.decorators.http import require_POST
+
+from .forms import SubmissionForm, SubmissionStatusForm, value_or_other  # noqa: F401
+from .models import Submission, normalize_tracking_code
+from .ratelimit import rate_limit
+
+
+SESSION_TRACKING_CODES = 'saved_tracking_codes'
+SESSION_LAST_CODE = 'last_tracking_code'
+SESSION_LAST_TITLE = 'last_submission_title'
 
 
 def first_superuser():
@@ -23,73 +36,113 @@ def user_is_first_admin(user):
     return bool(user.is_authenticated and first and user.pk == first.pk)
 
 
-def value_or_other(posted, custom):
-    if posted == 'Other':
-        custom = (custom or '').strip()
-        return custom if custom else 'Other'
-    return posted
+def staff_required(view):
+    @login_required
+    @wraps(view)
+    def wrapped(request, *args, **kwargs):
+        if not request.user.is_staff:
+            return render(request, 'submissions/login.html', {
+                'error': 'This account cannot access the review dashboard.',
+            }, status=403)
+        return view(request, *args, **kwargs)
+    return wrapped
 
 
 def status_page_url(request):
-    return f"{settings.PUBLIC_BASE_URL}{reverse('check_status')}"
+    path = reverse('check_status')
+    current = request.build_absolute_uri(path)
+    override = (getattr(settings, 'PUBLIC_BASE_URL', '') or '').rstrip('/')
+    if not override:
+        return current
+    host = request.get_host()
+    if ('127.0.0.1' in override or 'localhost' in override) and (
+        '127.0.0.1' not in host and 'localhost' not in host
+    ):
+        return current
+    return f'{override}{path}'
+
+
+def safe_next_url(request):
+    candidate = request.POST.get('next') or request.GET.get('next')
+    if candidate and url_has_allowed_host_and_scheme(
+        candidate,
+        allowed_hosts={request.get_host()},
+        require_https=request.is_secure(),
+    ):
+        return candidate
+    return None
+
+
+def remember_tracking_code(request, code, title):
+    saved = [
+        entry for entry in request.session.get(SESSION_TRACKING_CODES, [])
+        if entry.get('code') != code
+    ]
+    saved.insert(0, {'code': code, 'title': title})
+    request.session[SESSION_TRACKING_CODES] = saved[:20]
+    request.session[SESSION_LAST_CODE] = code
+    request.session[SESSION_LAST_TITLE] = title
+    request.session.modified = True
+
+
+def field_value(form, name, default=''):
+    if name in form.data:
+        return form.data.get(name, default)
+    value = form[name].value()
+    return default if value is None else value
 
 
 @ensure_csrf_cookie
 def submit_paper(request):
     if request.method == 'POST':
-        title = request.POST.get('title')
-        article_type = value_or_other(
-            request.POST.get('article_type'),
-            request.POST.get('article_type_other'),
-        )
-        author_number = request.POST.get('author_number', 1)
-        author_names = request.POST.get('author_names')
-        publication_date = request.POST.get('publication_date')
-        doi = request.POST.get('doi', '')
-        indexed_on = value_or_other(
-            request.POST.get('indexed_on'),
-            request.POST.get('indexed_on_other'),
-        )
-        source_of_funding = request.POST.get('source_of_funding')
-        affiliations = request.POST.get('affiliations')
-        pdf = request.FILES.get('pdf')
-
-        submission = Submission.objects.create(
-            title=title,
-            article_type=article_type,
-            author_number=author_number,
-            author_names=author_names,
-            publication_date=publication_date,
-            doi=doi,
-            indexed_on=indexed_on,
-            source_of_funding=source_of_funding,
-            affiliations=affiliations,
-            pdf=pdf,
-            status='pending'
-        )
-        return redirect('submit_success', pk=submission.pk)
+        form = SubmissionForm(request.POST, request.FILES)
+        if form.is_valid():
+            submission = form.save()
+            remember_tracking_code(request, submission.tracking_code, submission.title)
+            return redirect('submit_success')
+    else:
+        form = SubmissionForm()
 
     return render(request, 'submissions/submit.html', {
+        'form': form,
         'status_check_url': status_page_url(request),
+        'title_value': field_value(form, 'title'),
+        'article_type_value': field_value(form, 'article_type'),
+        'article_type_other_value': field_value(form, 'article_type_other'),
+        'author_number_value': field_value(form, 'author_number', 1),
+        'author_names_value': field_value(form, 'author_names'),
+        'publication_date_value': field_value(form, 'publication_date'),
+        'doi_value': field_value(form, 'doi'),
+        'indexed_on_value': field_value(form, 'indexed_on'),
+        'indexed_on_other_value': field_value(form, 'indexed_on_other'),
+        'source_of_funding_value': field_value(form, 'source_of_funding'),
+        'affiliations_value': field_value(form, 'affiliations'),
     })
 
 
-def submit_success(request, pk):
-    submission = get_object_or_404(Submission, pk=pk)
+def submit_success(request):
+    tracking_code = request.session.get(SESSION_LAST_CODE)
+    title = request.session.get(SESSION_LAST_TITLE)
     return render(request, 'submissions/submitted.html', {
-        'title': submission.title,
-        'tracking_code': submission.tracking_code,
+        'missing': not tracking_code,
+        'title': title,
+        'tracking_code': tracking_code,
         'status_check_url': status_page_url(request),
     })
 
 
 @ensure_csrf_cookie
+@rate_limit('status', settings.STATUS_RATE_LIMIT, settings.STATUS_RATE_WINDOW)
 def check_status(request):
     submission = None
     error = None
     tracking_code = ''
+    rate_limited = getattr(request, 'rate_limited', False)
 
-    if request.method == 'POST':
+    if request.method == 'POST' and rate_limited:
+        error = 'Too many attempts. Wait a minute and try again.'
+        tracking_code = normalize_tracking_code(request.POST.get('tracking_code'))
+    elif request.method == 'POST':
         tracking_code = normalize_tracking_code(request.POST.get('tracking_code'))
         if not tracking_code:
             error = 'Enter your tracking code.'
@@ -102,7 +155,8 @@ def check_status(request):
         'submission': submission,
         'error': error,
         'tracking_code': tracking_code,
-    })
+        'saved_codes': request.session.get(SESSION_TRACKING_CODES, []),
+    }, status=429 if rate_limited else 200)
 
 
 @ensure_csrf_cookie
@@ -116,7 +170,7 @@ def setup_admin(request):
         username = request.POST.get('username')
         password = request.POST.get('password')
         try:
-            validate_password(password)
+            validate_password(password, user=User(username=username))
         except ValidationError as exc:
             return render(request, 'submissions/setup.html', {
                 'error': ' '.join(exc.messages),
@@ -128,25 +182,40 @@ def setup_admin(request):
 
 
 @ensure_csrf_cookie
+@rate_limit('login', settings.LOGIN_RATE_LIMIT, settings.LOGIN_RATE_WINDOW)
 def admin_login(request):
+    next_url = safe_next_url(request)
+    rate_limited = getattr(request, 'rate_limited', False)
+
     if request.method == 'POST':
+        if rate_limited:
+            return render(request, 'submissions/login.html', {
+                'error': 'Too many attempts. Wait a minute and try again.',
+                'next': next_url or '',
+            }, status=429)
         user = request.POST.get('username')
         pwd = request.POST.get('password')
         account = authenticate(request, username=user, password=pwd)
-        if account is not None:
+        if account is not None and account.is_staff:
             login(request, account)
-            return redirect('submission_list')
-        return render(request, 'submissions/login.html', {'error': 'Invalid credentials'})
+            return redirect(next_url or 'submission_list')
+        return render(request, 'submissions/login.html', {
+            'error': 'Invalid credentials',
+            'next': next_url or '',
+        })
 
-    return render(request, 'submissions/login.html')
+    return render(request, 'submissions/login.html', {
+        'next': request.GET.get('next', ''),
+    })
 
 
+@require_POST
 def admin_logout(request):
     logout(request)
     return redirect('admin_login')
 
 
-@login_required(login_url='/login/')
+@staff_required
 @ensure_csrf_cookie
 def create_admin(request):
     if not user_is_first_admin(request.user):
@@ -170,11 +239,17 @@ def create_admin(request):
             error = 'That username is already taken.'
         else:
             try:
-                validate_password(password)
+                validate_password(password, user=User(username=username))
             except ValidationError as exc:
                 error = ' '.join(exc.messages)
             else:
-                User.objects.create_superuser(username=username, email='', password=password)
+                reviewer = User.objects.create_user(
+                    username=username,
+                    email='',
+                    password=password,
+                )
+                reviewer.is_staff = True
+                reviewer.save(update_fields=['is_staff'])
                 success = f'Admin "{username}" was created.'
 
     return render(request, 'submissions/create_admin.html', {
@@ -183,7 +258,7 @@ def create_admin(request):
     })
 
 
-@login_required(login_url='/login/')
+@staff_required
 @ensure_csrf_cookie
 def submission_list(request):
     q = request.GET.get('q', '').strip()
@@ -197,12 +272,17 @@ def submission_list(request):
             Q(doi__icontains=q) |
             Q(tracking_code__icontains=q)
         )
-    if status in ['pending', 'under_review', 'reviewed']:
+    if status in Submission.STATUS_VALUES:
         submissions = submissions.filter(status=status)
+
+    page_obj = Paginator(submissions, settings.DASHBOARD_PAGE_SIZE).get_page(
+        request.GET.get('page')
+    )
 
     all_subs = Submission.objects.all()
     context = {
-        'submissions': submissions,
+        'submissions': page_obj,
+        'page_obj': page_obj,
         'q': q,
         'status': status,
         'total_count': all_subs.count(),
@@ -210,30 +290,38 @@ def submission_list(request):
         'under_review_count': all_subs.filter(status='under_review').count(),
         'reviewed_count': all_subs.filter(status='reviewed').count(),
         'can_create_admin': user_is_first_admin(request.user),
+        'status_choices': Submission.STATUS_CHOICES,
     }
     return render(request, 'submissions/list.html', context)
 
 
-@login_required(login_url='/login/')
+@staff_required
 @ensure_csrf_cookie
 def submission_detail(request, pk):
     submission = get_object_or_404(Submission, pk=pk)
+    form = SubmissionStatusForm(instance=submission)
 
     if request.method == 'POST':
-        new_status = request.POST.get('status')
-        if new_status in ['pending', 'under_review', 'reviewed']:
-            submission.status = new_status
-            submission.save()
+        form = SubmissionStatusForm(request.POST, instance=submission)
+        if form.is_valid():
+            updated = form.save(commit=False)
+            updated.reviewed_by = request.user
+            updated.reviewed_at = timezone.now()
+            updated.save()
             return redirect('submission_detail', pk=pk)
 
-    return render(request, 'submissions/detail.html', {'submission': submission})
+    return render(request, 'submissions/detail.html', {
+        'submission': submission,
+        'form': form,
+        'status_choices': Submission.STATUS_CHOICES,
+    })
 
 
-@login_required(login_url='/login/')
+@staff_required
 def download_pdf(request, pk):
     submission = get_object_or_404(Submission, pk=pk)
     if not submission.pdf:
-        raise Http404("No PDF for this submission.")
+        raise Http404('No PDF for this submission.')
     return FileResponse(
         submission.pdf.open('rb'),
         as_attachment=False,

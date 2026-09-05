@@ -27,6 +27,13 @@
     font-display: swap;
 }
 
+:root {
+    --accent: #3b82f6;
+    --text: #333;
+    --muted: #4b5563;
+    --bg: #f7f9fc;
+}
+
 * {
     box-sizing: border-box;
     font-family: 'Roboto Condensed', 'Segoe UI', Tahoma, sans-serif;
@@ -68,6 +75,51 @@ input, select, textarea, button {
     padding: 0 8px;
     color: #1e3a8a;
     line-height: 1.45;
+}
+.container .status-note {
+    max-width: none;
+    margin: 18px 0 0;
+    padding: 0;
+}
+.field-error {
+    margin: 8px 0 0;
+    color: #991b1b;
+    font-size: 14px;
+}
+.saved-codes {
+    margin-top: 22px;
+    text-align: left;
+}
+.saved-codes ul {
+    margin: 8px 0 0;
+    padding-left: 18px;
+}
+.saved-codes li {
+    margin: 6px 0;
+}
+.page-nav {
+    margin: 22px 0 0;
+    text-align: center;
+}
+.page-nav a {
+    color: #1d4ed8;
+    font-weight: 600;
+}
+.pagination {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    gap: 16px;
+    margin-top: 18px;
+}
+.pagination a {
+    color: #1d4ed8;
+    font-weight: 600;
+    text-decoration: none;
+}
+.logout-form {
+    margin: 0;
+    display: inline;
 }
 .status-note a,
 .tracking-hint a {
@@ -247,7 +299,10 @@ th{
     text-decoration: none;
     font-weight: 600;
     font-size: 20px;
+    border: none;
     border-radius: 6px;
+    cursor: pointer;
+    font-family: inherit;
 }
 .text-green {
     color: #16a34a;

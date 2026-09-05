@@ -1,26 +1,33 @@
+{% extends "submissions/base.html" %}
 {% load static %}
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+{% block extra_css %}
     <link rel="stylesheet" href="{% static 'fontawesome/css/solid.min.css' %}">
-    <link rel="stylesheet" href="{% static 'css/style.css' %}">
-    <title>Submitted successfully</title>
-</head>
-<body>
+{% endblock %}
+
+{% block title %}Submitted successfully{% endblock %}
+
+{% block content %}
     <div class="successpage">
-        <i class="fa-solid fa-circle-check successtick"></i>
-        <h1 class="successtitle">Submitted successfully</h1>
-        <p class="successmessage">Your paper <strong>{{ title }}</strong> has been received and is pending review.</p>
-        <div class="tracking-box">
-            <p class="tracking-label">Your tracking code</p>
-            <p class="tracking-code">{{ tracking_code }}</p>
-            <p class="tracking-hint">Save this code. You can check the status of your paper at <a href="{% url 'check_status' %}">{{ status_check_url }}</a>.</p>
-        </div>
+        {% if missing %}
+            <h1 class="successtitle">Confirmation unavailable</h1>
+            <p class="successmessage">This page only shows the tracking code in the same browser that submitted the paper. If you still have this browser open, check the codes saved on the status page. An admin can look the code up if it was lost.</p>
+            <div class="tracking-box">
+                <p class="tracking-hint">You can check the status of your paper at <a href="{% url 'check_status' %}">{{ status_check_url }}</a>.</p>
+            </div>
+        {% else %}
+            <i class="fa-solid fa-circle-check successtick"></i>
+            <h1 class="successtitle">Submitted successfully</h1>
+            <p class="successmessage">Your paper <strong>{{ title }}</strong> has been received and is pending review.</p>
+            <div class="tracking-box">
+                <p class="tracking-label">Your tracking code</p>
+                <p class="tracking-code">{{ tracking_code }}</p>
+                <p class="tracking-hint">Save this code. You can check the status of your paper at <a href="{% url 'check_status' %}">{{ status_check_url }}</a>. If you close this tab, reopen this page or the status page in the same browser to see the code again.</p>
+            </div>
+        {% endif %}
         <div class="success-actions">
             <a href="{% url 'submit_paper' %}" class="submitbutton">Submit another paper</a>
+            <a href="{% url 'check_status' %}" class="submitbutton">Check status</a>
         </div>
     </div>
-</body>
-</html>
+{% endblock %}

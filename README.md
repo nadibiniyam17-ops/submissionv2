@@ -4,9 +4,9 @@ Django app for submitting research papers as PDFs and reviewing them from an adm
 
 You need **Python 3.12 or newer**.
 
-This project only needs Django. Install it with `pip install django` (this app was built on **Django 6.1**; if a brand-new Django release breaks the site, run `pip install "Django>=6.1,<6.2"` instead).
+Install pinned dependencies from `requirements.txt` (Django 6.1, Gunicorn, WhiteNoise, and the Postgres driver). Do not run a bare `pip install django` — a newer Django can break the app.
 
-**Putting it on the internet?** First edit `settings.py` using **[setup.md](setup.md)**, then follow **Host it live** below. Do not use `runserver` as your public site.
+**Putting it on the internet?** Copy `.env.example` to `.env` and follow **[setup.md](setup.md)**. Do not edit `settings.py` by hand; `git pull` would overwrite those edits. Do not use `runserver` as your public site.
 
 ---
 
@@ -17,7 +17,7 @@ Stay in the **project root** (the folder that contains `README.md` and `submissi
 ```powershell
 python -m venv venv
 .\venv\Scripts\Activate.ps1
-pip install django
+pip install -r requirements.txt
 
 cd submission_portal
 python manage.py migrate
@@ -37,7 +37,7 @@ Then run `.\venv\Scripts\Activate.ps1` again.
 You can skip activation and call the venv Python directly (from the project root):
 
 ```powershell
-.\venv\Scripts\python.exe -m pip install django
+.\venv\Scripts\python.exe -m pip install -r requirements.txt
 cd submission_portal
 ..\venv\Scripts\python.exe manage.py migrate
 ..\venv\Scripts\python.exe manage.py runserver
@@ -55,7 +55,9 @@ Open **http://127.0.0.1:8000/**
 
 These addresses are for your laptop only. On a real server they become `https://your-domain/...`. See **[setup.md](setup.md)** for every line in the code you must change.
 
-After you submit a paper, the success page shows a **tracking code** (for example `RS-8F3K2P`). Save it. Under the submit form there is a link to `/status/`. Open that page and enter the code to see whether the paper is pending, under review, or reviewed. If someone loses their code, an admin can look it up on the dashboard.
+After you submit a paper, the success page shows a **tracking code** (for example `RS-8F3K2P`). Save it. The status link is under the form card on submit and inside the success card after submit. Open `/status/` and enter the code to see whether the paper is pending, under review, or reviewed.
+
+If you close the tab, reopen `/submitted/` or `/status/` in the **same browser** — the code is kept in that browser session. There is no email resend. If the browser data is gone, an admin can still look the code up on the dashboard. The success page is not keyed by a public sequential id.
 
 `/setup/` works only while no admin exists. After that it shows a closed page and you sign in at `/login/`. Only the **first** admin (the account created at `/setup/`) can add more admins from the dashboard. Later admins can review papers but cannot open **Add admin**.
 
@@ -75,11 +77,11 @@ cd submission_portal
 python manage.py runserver
 ```
 
-If `venv` does not exist yet, create it first with `python -m venv venv` and `pip install django` (from the project root, venv activated).
+If `venv` does not exist yet, create it first with `python -m venv venv` and `pip install -r requirements.txt` (from the project root, venv activated).
 
 **`pip` cannot reach pypi.org / `getaddrinfo failed`**
 
-That is a network or DNS problem, not a Django problem. Fix internet access, then from the project root with the venv activated run `pip install django`. Do not install Django into system Python.
+That is a network or DNS problem, not a Django problem. Fix internet access, then from the project root with the venv activated run `pip install -r requirements.txt`. Do not install Django into system Python.
 
 ### Already cloned from GitHub?
 
@@ -88,6 +90,8 @@ git clone https://github.com/nadibiniyam17-ops/submissionv2.git
 cd submissionv2
 ```
 
+Use this repository (`submissionv2`). A remote named `origin` that still points at `research-submission-portal` is the wrong target.
+
 Then run the same local commands above.
 
 ### macOS / Linux (laptop)
@@ -95,7 +99,7 @@ Then run the same local commands above.
 ```bash
 python3 -m venv venv
 source venv/bin/activate
-pip install django
+pip install -r requirements.txt
 cd submission_portal
 python manage.py migrate
 python manage.py runserver
@@ -155,25 +159,25 @@ If you already uploaded the files another way, `cd` into the folder that contain
 python3 -m venv venv
 source venv/bin/activate
 pip install --upgrade pip
-pip install django gunicorn
+pip install -r requirements.txt
 ```
 
-Gunicorn is the process that runs Django. Nginx is the public front door.
+Gunicorn is the process that runs Django. Nginx is the public front door. Versions are pinned in `requirements.txt`.
 
-### 5. Edit settings (do not skip)
+### 5. Create `.env` (do not skip)
 
-Follow **[setup.md](setup.md)** now. In `submission_portal/submission_portal/settings.py` you must set:
+Follow **[setup.md](setup.md)** now. Copy `.env.example` to `.env` in the project root and set:
 
-- a new `SECRET_KEY`
-- `DEBUG = False`
-- `ALLOWED_HOSTS` to your domain
-- `CSRF_TRUSTED_ORIGINS` to `https://your-domain`
-- `PUBLIC_BASE_URL` to `https://your-domain`
+- `DJANGO_SECRET_KEY`
+- `DJANGO_DEBUG=false`
+- `DJANGO_ALLOWED_HOSTS` to your domain
+- `DJANGO_CSRF_TRUSTED_ORIGINS` to `https://your-domain`
 
-Until that file is saved, do not continue. The status link will still show `127.0.0.1` if `PUBLIC_BASE_URL` is unchanged.
+Leave `PUBLIC_BASE_URL` empty so the status link matches the host visitors actually use.
 
 ```bash
-nano submission_portal/submission_portal/settings.py
+cp .env.example .env
+nano .env
 ```
 
 Save and exit (`Ctrl+O`, Enter, `Ctrl+X` in nano).
@@ -229,6 +233,7 @@ User=YOUR_USER
 Group=www-data
 WorkingDirectory=/home/YOUR_USER/submissionv2/submission_portal
 Environment="PATH=/home/YOUR_USER/submissionv2/venv/bin"
+EnvironmentFile=/home/YOUR_USER/submissionv2/.env
 ExecStart=/home/YOUR_USER/submissionv2/venv/bin/gunicorn \
     --workers 3 \
     --bind 127.0.0.1:8000 \
@@ -271,6 +276,8 @@ server {
 
     client_max_body_size 20M;
 
+    # Both the location and the alias path must end with a slash.
+    # If either slash is missing, CSS disappears once DEBUG is false.
     location /static/ {
         alias /home/YOUR_USER/submissionv2/submission_portal/staticfiles/;
     }
@@ -314,13 +321,13 @@ sudo certbot --nginx -d papers.example.com
 
 Follow the prompts (email, agree to terms). Certbot edits Nginx so the site uses `https://`.
 
-Then add the extra HTTPS lines from **setup.md section G** to `settings.py`, and restart:
+Then set `DJANGO_SECURE_SSL=true` in `.env` and restart:
 
 ```bash
 sudo systemctl restart submission-portal
 ```
 
-The check-status link must be `https://papers.example.com/status/` (`PUBLIC_BASE_URL`).
+The check-status link is built from the request host, so visitors should see `https://papers.example.com/status/`.
 
 ### 12. Confirm everything
 
@@ -333,7 +340,7 @@ The check-status link must be `https://papers.example.com/status/` (`PUBLIC_BASE
 | First admin | `https://papers.example.com/setup/` |
 | Login | `https://papers.example.com/login/` |
 
-If you change `settings.py` later:
+If you change `.env` later:
 
 ```bash
 sudo systemctl restart submission-portal
@@ -360,7 +367,82 @@ python manage.py collectstatic --noinput
 sudo systemctl restart submission-portal
 ```
 
-If `git pull` overwrites `settings.py`, put your production values back (see [setup.md](setup.md)).
+`.env` is gitignored, so `git pull` will not overwrite production secrets. Put Gunicorn’s environment in the systemd unit if you are not loading `.env` from the project root:
+
+```ini
+EnvironmentFile=/home/YOUR_USER/submissionv2/.env
+```
+
+---
+
+## Other ways to host it
+
+The Ubuntu + Nginx + systemd + Certbot path above is one option. These also work.
+
+### Docker
+
+From the project root, with a filled-in `.env`:
+
+```bash
+docker compose up --build
+```
+
+The app listens on port 8000. WhiteNoise serves `/static/`. Uploads stay in a volume. Put Nginx or a PaaS load balancer in front for HTTPS.
+
+Postgres instead of SQLite:
+
+```bash
+docker compose --profile postgres up --build
+```
+
+Set `DATABASE_URL=postgres://portal:portal@db:5432/portal` in `.env`.
+
+### Windows Server
+
+Use **Docker Desktop** and the same `docker compose` command, or run Gunicorn/Waitress on the machine and put IIS or Nginx for Windows in front. Bind the public site to HTTPS. Copy `.env.example` to `.env` the same way. This project does not ship an IIS `web.config`.
+
+### PaaS (Render, Railway, Fly, and similar)
+
+Set the same environment variables as `.env`. Use a Postgres add-on and `DATABASE_URL`. The start command is:
+
+```bash
+cd submission_portal && python manage.py migrate && python manage.py collectstatic --noinput && gunicorn submission_portal.wsgi:application --bind 0.0.0.0:$PORT
+```
+
+WhiteNoise serves CSS when there is no Nginx.
+
+---
+
+## Postgres, backups, and logs
+
+SQLite on one disk is fine for a laptop and a small class server. Concurrent uploads, moving servers, and backups are weaker on SQLite. For anything shared, use Postgres (`DATABASE_URL`).
+
+**SQLite backup** (stop writes or copy a consistent file):
+
+```bash
+sqlite3 submission_portal/db.sqlite3 ".backup /var/backups/portal.sqlite3"
+cp -a submission_portal/media /var/backups/portal-media
+```
+
+**Postgres backup:**
+
+```bash
+pg_dump "$DATABASE_URL" > /var/backups/portal.sql
+```
+
+Keep `media/` with the database. A database restore without the PDFs leaves broken downloads.
+
+**Logs:** systemd already sends Gunicorn output to the journal (`journalctl -u submission-portal`). For Nginx, enable logrotate (Ubuntu’s `nginx` package already ships a rotate rule). Example extra file `/etc/logrotate.d/submission-portal` if you add app file logs:
+
+```
+/var/log/submission-portal/*.log {
+    weekly
+    rotate 8
+    compress
+    missingok
+    notifempty
+}
+```
 
 ---
 
@@ -368,7 +450,8 @@ If `git pull` overwrites `settings.py`, put your production values back (see [se
 
 These are local-only (see `.gitignore`):
 
-- `venv/` — recreate with `python -m venv venv` then `pip install django`
+- `venv/` — recreate with `python -m venv venv` then `pip install -r requirements.txt`
+- `.env` and `.secret_key` — local/production secrets; copy from `.env.example`
 - `db.sqlite3` — created by `python manage.py migrate` (empty database)
 - `media/` — created when someone uploads a PDF
 - `staticfiles/` — created on the server by `collectstatic`

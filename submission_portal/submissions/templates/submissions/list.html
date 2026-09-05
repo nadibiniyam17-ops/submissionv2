@@ -1,13 +1,8 @@
-{% load static %}
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <link rel="stylesheet" href="{% static 'css/style.css' %}">
-    <title>Admin dashboard</title>
-</head>
-<body>
+{% extends "submissions/base.html" %}
+
+{% block title %}Admin dashboard{% endblock %}
+
+{% block content %}
     <div class="admin_dashboard">
         <div class="overview">
             <div>
@@ -19,7 +14,10 @@
                 {% if can_create_admin %}
                 <a href="{% url 'create_admin' %}" class="addadminbutton"><strong>Add admin</strong></a>
                 {% endif %}
-                <a href="{% url 'admin_logout' %}" class="logoutbutton"><strong>Logout</strong></a>
+                <form method="post" action="{% url 'admin_logout' %}" class="logout-form">
+                    {% csrf_token %}
+                    <button type="submit" class="logoutbutton"><strong>Logout</strong></button>
+                </form>
             </div>
         </div>
 
@@ -46,9 +44,9 @@
             <input type="text" name="q" value="{{ q }}" placeholder="Search title, author, DOI, or tracking code">
             <select name="status">
                 <option value="">All statuses</option>
-                <option value="pending" {% if status == 'pending' %}selected{% endif %}>Pending</option>
-                <option value="under_review" {% if status == 'under_review' %}selected{% endif %}>Under review</option>
-                <option value="reviewed" {% if status == 'reviewed' %}selected{% endif %}>Reviewed</option>
+                {% for value, label in status_choices %}
+                <option value="{{ value }}" {% if status == value %}selected{% endif %}>{{ label }}</option>
+                {% endfor %}
             </select>
             <button type="submit" class="viewbutton">Filter</button>
             {% if q or status %}
@@ -92,7 +90,17 @@
                 </tbody>
             </table>
         </div>
-    </div>
 
-</body>
-</html>
+        {% if page_obj.paginator.num_pages > 1 %}
+        <nav class="pagination">
+            {% if page_obj.has_previous %}
+                <a href="?page={{ page_obj.previous_page_number }}{% if q %}&q={{ q }}{% endif %}{% if status %}&status={{ status }}{% endif %}">Previous</a>
+            {% endif %}
+            <span>Page {{ page_obj.number }} of {{ page_obj.paginator.num_pages }}</span>
+            {% if page_obj.has_next %}
+                <a href="?page={{ page_obj.next_page_number }}{% if q %}&q={{ q }}{% endif %}{% if status %}&status={{ status }}{% endif %}">Next</a>
+            {% endif %}
+        </nav>
+        {% endif %}
+    </div>
+{% endblock %}

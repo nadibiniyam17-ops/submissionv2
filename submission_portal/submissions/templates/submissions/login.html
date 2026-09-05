@@ -1,13 +1,8 @@
-{% load static %}
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <link rel="stylesheet" href="{% static 'css/style.css' %}">
-    <title>Admin login</title>
-</head>
-<body>
+{% extends "submissions/base.html" %}
+
+{% block title %}Admin login{% endblock %}
+
+{% block content %}
     <div class="login">
         <h2>Admin login</h2>
         {% if user.is_authenticated %}
@@ -16,6 +11,7 @@
         {% if error %}<div class="alert-error">{{ error }}</div>{% endif %}
         <form method="POST">
             {% csrf_token %}
+            {% if next %}<input type="hidden" name="next" value="{{ next }}">{% endif %}
             <div class="form-group">
                 <label>Username</label>
                 <input type="text" name="username" placeholder="Enter your username" required>
@@ -27,5 +23,4 @@
             <button type="submit" class="submitbutton">LOG IN</button>
         </form>
     </div>
-</body>
-</html>
+{% endblock %}

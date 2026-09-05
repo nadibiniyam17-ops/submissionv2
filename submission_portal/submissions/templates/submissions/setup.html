@@ -1,13 +1,8 @@
-{% load static %}
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <link rel="stylesheet" href="{% static 'css/style.css' %}">
-    <title>Admin setup</title>
-</head>
-<body>
+{% extends "submissions/base.html" %}
+
+{% block title %}Admin setup{% endblock %}
+
+{% block content %}
     <div class="setup">
         {% if setup_locked %}
             <div class="setup-locked">
@@ -35,5 +30,4 @@
             </form>
         {% endif %}
     </div>
-</body>
-</html>
+{% endblock %}

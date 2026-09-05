@@ -1,13 +1,8 @@
-{% load static %}
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <link rel="stylesheet" href="{% static 'css/style.css' %}">
-    <title>Check submission status</title>
-</head>
-<body>
+{% extends "submissions/base.html" %}
+
+{% block title %}Check submission status{% endblock %}
+
+{% block content %}
     <div class="login">
         <h2>Check status</h2>
         <p class="status-intro">Enter the tracking code you received when you submitted your paper.</p>
@@ -29,6 +24,16 @@
             </p>
         </div>
         {% endif %}
+        {% if saved_codes %}
+        <div class="saved-codes">
+            <p class="tracking-label">Codes saved in this browser</p>
+            <ul>
+                {% for item in saved_codes %}
+                <li><span class="tracking-code-inline">{{ item.code }}</span> — {{ item.title }}</li>
+                {% endfor %}
+            </ul>
+        </div>
+        {% endif %}
+        <p class="page-nav"><a href="{% url 'submit_paper' %}">Submit a paper</a></p>
     </div>
-</body>
-</html>
+{% endblock %}

@@ -1,18 +1,14 @@
-{% load static %}
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <link rel="stylesheet" href="{% static 'css/style.css' %}">
-    <title>Submission detail</title>
-</head>
-<body>
+{% extends "submissions/base.html" %}
+
+{% block title %}Submission detail{% endblock %}
+
+{% block content %}
     <div class="submission_details">
         <a href="{% url 'submission_list' %}" class="back-link">←Back to dashboard</a>
         <h2>{{ submission.title }}</h2>
         <hr>
         <p><strong>Tracking code:</strong> <span class="tracking-code-inline">{{ submission.tracking_code }}</span></p>
+        <p><strong>Submitted:</strong> {{ submission.created_at }}</p>
         <p><strong>Article type:</strong> {{ submission.article_type }}</p>
         <p><strong>Number of authors:</strong> {{ submission.author_number }}</p>
         <p><strong>Author names:</strong> {{ submission.author_names }}</p>
@@ -21,15 +17,18 @@
         <p><strong>Indexed on:</strong> {{ submission.indexed_on }}</p>
         <p><strong>Source of funding:</strong> {{ submission.source_of_funding }}</p>
         <p><strong>Affiliation:</strong> {{ submission.affiliations }}</p>
+        {% if submission.reviewed_by %}
+        <p><strong>Last reviewed by:</strong> {{ submission.reviewed_by.username }}{% if submission.reviewed_at %} at {{ submission.reviewed_at }}{% endif %}</p>
+        {% endif %}
 
         <form method="post" class="statusform">
             {% csrf_token %}
             <label for="status"><strong>Review status</strong></label>
             <div class="statusrow">
                 <select name="status" id="status">
-                    <option value="pending" {% if submission.status == 'pending' %}selected{% endif %}>Pending</option>
-                    <option value="under_review" {% if submission.status == 'under_review' %}selected{% endif %}>Under review</option>
-                    <option value="reviewed" {% if submission.status == 'reviewed' %}selected{% endif %}>Reviewed</option>
+                    {% for value, label in status_choices %}
+                    <option value="{{ value }}" {% if submission.status == value %}selected{% endif %}>{{ label }}</option>
+                    {% endfor %}
                 </select>
                 <button type="submit" class="viewbutton">Save status</button>
             </div>
@@ -45,5 +44,4 @@
         </div>
         {% endif %}
     </div>
-</body>
-</html>
+{% endblock %}
