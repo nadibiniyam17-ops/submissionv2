@@ -22,7 +22,7 @@ Stay in the **project root** — the folder that contains `README.md`, `requirem
 | `requirements.txt` | Package list. **Do not run the file.** Install it with `python -m pip install -r requirements.txt`. |
 | `.env.example` | Template. Copy it to `.env`. The app never reads `.env.example`. |
 | `.env` | You create this. Laptop: optional. Server: required. Commands are in this README. Exact domain values are in **[setup.md](setup.md)**. Gitignored. |
-| `.secret_key` | Auto-created on a laptop if `DJANGO_SECRET_KEY` is empty. On a server, put the key in `.env`. Gitignored. |
+| `.secret_key` | Auto-created on a laptop if `DJANGO_SECRET_KEY` is empty. After `.env` is complete and includes the key, **delete this file**. Gitignored. |
 | `setup.md` | Domain / production values only. Not used at runtime. |
 | `README.md` | This file. Commands for users and servers. |
 
@@ -83,6 +83,8 @@ cp .env.example .env
 ```
 
 Leave the example values (`DJANGO_DEBUG=true`, hosts `127.0.0.1,localhost`). For a **public domain**, stop here and fill the keys as **[setup.md](setup.md)** says, then continue with the server commands in section 5.
+
+Once `.env` is fully written and `DJANGO_SECRET_KEY` is set in that file, delete the extra `.secret_key` file if it exists (`Remove-Item .secret_key` on Windows, `rm -f .secret_key` on Linux). Keep `.env.example`.
 
 ---
 
@@ -211,6 +213,14 @@ nano .env
 ```
 
 Paste the generated key into `DJANGO_SECRET_KEY`. Set the domain keys exactly as **[setup.md](setup.md)** lists (`DEBUG=false`, `ALLOWED_HOSTS`, `CSRF_TRUSTED_ORIGINS`, leave `PUBLIC_BASE_URL` empty). Save (`Ctrl+O`, Enter, `Ctrl+X`).
+
+Once `.env` is complete and contains the secret key, delete the leftover file:
+
+```bash
+rm -f .secret_key
+```
+
+Do not delete `.env` or `.env.example`.
 
 ### 5.6 Database and static files
 

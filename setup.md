@@ -56,7 +56,19 @@ python -c "from django.core.management.utils import get_random_secret_key; print
 DJANGO_SECRET_KEY=paste-the-generated-key-here
 ```
 
-Every Gunicorn worker must see the **same** key. Do not leave this empty on a server (the auto `.secret_key` file is a laptop fallback only). Do not reuse a key that was ever committed.
+Every Gunicorn worker must see the **same** key. Do not leave this empty on a server. Do not reuse a key that was ever committed.
+
+Once `.env` is fully written **and** it includes `DJANGO_SECRET_KEY`, delete the leftover `.secret_key` file in the project root (the app created it as a laptop fallback). The key should live in `.env` only.
+
+```powershell
+Remove-Item .secret_key -ErrorAction SilentlyContinue
+```
+
+```bash
+rm -f .secret_key
+```
+
+Do not delete `.env.example`. That template stays in the repo.
 
 ### `DJANGO_DEBUG` — required
 
@@ -182,12 +194,13 @@ DJANGO_SECURE_SSL=true
 
 1. DNS A record points at the server (or you are using the IP).
 2. `.env` exists (copied from `.env.example`).
-3. `DJANGO_SECRET_KEY` is a new random key.
-4. `DJANGO_DEBUG=false`.
-5. `DJANGO_ALLOWED_HOSTS` is the domain **without** `https://`.
-6. `DJANGO_CSRF_TRUSTED_ORIGINS` is `https://your-domain`.
-7. Nginx `server_name` is the same domain.
-8. Commands in **[README.md](README.md)** section 5 are done.
-9. After HTTPS works, `DJANGO_SECURE_SSL=true` and restart Gunicorn.
+3. `DJANGO_SECRET_KEY` is a new random key inside `.env`.
+4. `.secret_key` is deleted (the extra file is not needed once the key is in `.env`).
+5. `DJANGO_DEBUG=false`.
+6. `DJANGO_ALLOWED_HOSTS` is the domain **without** `https://`.
+7. `DJANGO_CSRF_TRUSTED_ORIGINS` is `https://your-domain`.
+8. Nginx `server_name` is the same domain.
+9. Commands in **[README.md](README.md)** section 5 are done.
+10. After HTTPS works, `DJANGO_SECURE_SSL=true` and restart Gunicorn.
 
 Nothing in `settings.py` or the templates should have been edited for the domain.
