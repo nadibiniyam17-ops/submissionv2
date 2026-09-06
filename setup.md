@@ -1,28 +1,28 @@
-# Before you deploy: what to change, and where
+# What to change for a domain on a server
 
-Read this **before** you put the site on a real server. Install steps and Gunicorn/Nginx commands are in [README.md](README.md). This file is only the **configuration** (`.env`).
+Commands (venv, pip, migrate, Gunicorn, Nginx) are in **[README.md](README.md)**. This file is only **what must change** when the site is no longer `http://127.0.0.1:8000/`.
 
-Install packages first, from the project root (the folder that contains `requirements.txt`):
-
-```powershell
-python -m venv venv
-.\venv\Scripts\Activate.ps1
-python -m pip install -r requirements.txt
-```
-
-`requirements.txt` is a list, not a program. The `-r` flag is required. Then come back here to create `.env`.
-
-Do **not** edit `settings.py` for deploy. That file reads environment variables. If you edit it by hand, `git pull` can wipe the edits.
-
-Copy [`.env.example`](.env.example) to `.env` in the project root and change the values there. `.env` is gitignored. The running app reads `.env`, not `.env.example`.
-
-Locally the site is `http://127.0.0.1:8000/`. On the internet it must be **your** address, for example `https://papers.example.com`.
+You do **not** edit Django Python, templates, or CSS for a domain. The code already reads environment variables. You change **`.env`**, plus the **domain string** in Nginx (and DNS). If you edit `settings.py` by hand, `git pull` can wipe it.
 
 ---
 
-## 1. Write your public address
+## 1. What you do not change in the code
 
-Use this everywhere below. No trailing slash.
+| Path | Why you leave it alone |
+|------|------------------------|
+| `submission_portal/submission_portal/settings.py` | Already reads `.env`. Do not paste a secret key or domain here. |
+| `submission_portal/submissions/templates/` | No hardcoded laptop URLs. The status link is built from the visitor’s host. |
+| `submission_portal/submissions/views.py` | `status_page_url()` uses the current request (or `PUBLIC_BASE_URL` if you set one). |
+| `submission_portal/submissions/static/` | CSS and fonts. `collectstatic` copies them on the server. |
+| `README.md` | Laptop URLs stay as `127.0.0.1` on purpose. |
+
+If a form works on your laptop but CSRF-fails online, the problem is almost always `DJANGO_CSRF_TRUSTED_ORIGINS` in `.env`, not a template.
+
+---
+
+## 2. Write the public address
+
+No trailing slash.
 
 | | Example | Yours |
 |---|---|---|
@@ -30,29 +30,23 @@ Use this everywhere below. No trailing slash.
 | Full site URL | `https://papers.example.com` | |
 | Status page | `https://papers.example.com/status/` | |
 
-If you only have a server IP for now, use the IP in place of the domain (and `http://` until you add HTTPS).
+If you only have a server IP, use that IP in place of the domain, and `http://` until HTTPS works.
 
 ---
 
-## 2. Create `.env`
+## 3. What you change: `.env`
 
-From the project root:
+From the project root (see README for the `cp` / `Copy-Item` command):
 
-```bash
-cp .env.example .env
-```
+1. Copy `.env.example` to `.env`.
+2. Replace the laptop values with the domain values below.
+3. Restart Gunicorn after every `.env` edit (`sudo systemctl restart submission-portal`).
 
-On Windows PowerShell:
+The running app reads **`.env`**, not `.env.example`. `.env` is gitignored.
 
-```powershell
-Copy-Item .env.example .env
-```
+### `DJANGO_SECRET_KEY` — required on a public server
 
-Then edit `.env`.
-
-### A. `DJANGO_SECRET_KEY` (required on a public server)
-
-Generate a key (venv active):
+Generate (venv active):
 
 ```bash
 python -c "from django.core.management.utils import get_random_secret_key; print(get_random_secret_key())"
@@ -62,67 +56,83 @@ python -c "from django.core.management.utils import get_random_secret_key; print
 DJANGO_SECRET_KEY=paste-the-generated-key-here
 ```
 
-If this is empty, the app writes a random key to a gitignored `.secret_key` file. That is fine on a laptop. On a server, set the environment variable so workers and restarts share one key.
+Every Gunicorn worker must see the **same** key. Do not leave this empty on a server (the auto `.secret_key` file is a laptop fallback only). Do not reuse a key that was ever committed.
 
-The old demo key is no longer in `settings.py`.
-
-### B. `DJANGO_DEBUG` (required)
+### `DJANGO_DEBUG` — required
 
 ```env
 DJANGO_DEBUG=false
 ```
 
-`true` is only for your laptop. `false` hides error details from visitors.
+`true` is only for a laptop. `false` hides error pages from visitors.
 
-### C. `DJANGO_ALLOWED_HOSTS` (required)
+### `DJANGO_ALLOWED_HOSTS` — required
 
-Domain or IP, no `http://`, comma-separated.
+Domain or IP only. **No** `http://` or `https://`.
 
 ```env
 DJANGO_ALLOWED_HOSTS=papers.example.com
 ```
 
-If people can open the site by IP as well:
+Domain and IP:
 
 ```env
 DJANGO_ALLOWED_HOSTS=papers.example.com,203.0.113.10
 ```
 
-### D. `DJANGO_CSRF_TRUSTED_ORIGINS` (required)
+`www` as well:
 
-Must include the scheme.
+```env
+DJANGO_ALLOWED_HOSTS=papers.example.com,www.papers.example.com
+```
+
+Wrong: `https://papers.example.com` in this line. That causes `DisallowedHost`.
+
+### `DJANGO_CSRF_TRUSTED_ORIGINS` — required
+
+Must include the scheme. After HTTPS:
 
 ```env
 DJANGO_CSRF_TRUSTED_ORIGINS=https://papers.example.com
 ```
 
-If you also serve `www`:
+`www` as well:
 
 ```env
 DJANGO_CSRF_TRUSTED_ORIGINS=https://papers.example.com,https://www.papers.example.com
 ```
 
-### E. Status link
+Still on HTTP only (before Certbot):
 
-Leave `PUBLIC_BASE_URL` empty. The page prints the host the visitor actually opened, so the visible URL and the click cannot disagree.
+```env
+DJANGO_CSRF_TRUSTED_ORIGINS=http://papers.example.com
+```
 
-Set `PUBLIC_BASE_URL` only if you need a canonical public URL behind a proxy.
+Wrong: a host with no scheme. Forms will fail CSRF.
 
-### F. Static files
+### `PUBLIC_BASE_URL`
 
-`STATIC_ROOT` is already `staticfiles/`. WhiteNoise serves CSS if Nginx is missing or misconfigured. Still run `collectstatic` on the server.
+Leave **empty** so the “check status” URL matches the host the visitor opened.
 
-### G. After HTTPS works
+Set it only if a proxy makes Django see the wrong host and you need one canonical URL:
+
+```env
+PUBLIC_BASE_URL=https://papers.example.com
+```
+
+### `DJANGO_SECURE_SSL`
+
+Add **only after** HTTPS (Certbot) works:
 
 ```env
 DJANGO_SECURE_SSL=true
 ```
 
-Add this **only after** the certificate works. Too early and the site can redirect in a loop.
+Too early and the site can redirect in a loop.
 
-### H. Database
+### `DATABASE_URL`
 
-SQLite is the default. For Postgres:
+Leave unset for SQLite (default file: `submission_portal/db.sqlite3`). For Postgres:
 
 ```env
 DATABASE_URL=postgres://portal:portal@127.0.0.1:5432/portal
@@ -130,9 +140,24 @@ DATABASE_URL=postgres://portal:portal@127.0.0.1:5432/portal
 
 ---
 
-## 3. Finished example
+## 4. What you change outside `.env` (still not Python)
 
-For `https://papers.example.com`, `.env` should look like this:
+These strings must match the same domain.
+
+| Place | What to change |
+|-------|----------------|
+| DNS A record | Host `@` (and `www`) → server IP |
+| Nginx `server_name` | `papers.example.com` (your domain) |
+| Certbot | `sudo certbot --nginx -d papers.example.com` |
+| systemd `EnvironmentFile=` | Path to **this** machine’s `.env` |
+
+Do not add a public Nginx `/media/` location. PDFs go through the logged-in admin download view.
+
+---
+
+## 5. Finished `.env` for a domain
+
+For `https://papers.example.com`:
 
 ```env
 DJANGO_SECRET_KEY=your-new-random-key
@@ -143,38 +168,26 @@ PUBLIC_BASE_URL=
 DJANGO_SECURE_SSL=true
 ```
 
-Then:
-
-| Visitor wants | URL they use |
-|---------------|----------------|
-| Submit a paper | `https://papers.example.com/` |
-| Check status | `https://papers.example.com/status/` |
+| Visitor wants | URL |
+|---------------|-----|
+| Submit | `https://papers.example.com/` |
+| Status | `https://papers.example.com/status/` |
 | First admin | `https://papers.example.com/setup/` |
-| Admin login | `https://papers.example.com/login/` |
+| Login | `https://papers.example.com/login/` |
 | Dashboard | `https://papers.example.com/dashboard/` |
 
 ---
 
-## 4. Checklist (do this in order)
+## 6. Checklist
 
-1. Domain DNS **A record** points at the server IP (or you are using the IP for now).
-2. Copied `.env.example` to `.env`.
-3. Set `DJANGO_SECRET_KEY`.
-4. Set `DJANGO_DEBUG=false`.
-5. Set `DJANGO_ALLOWED_HOSTS` to your domain (no `https://`).
-6. Set `DJANGO_CSRF_TRUSTED_ORIGINS` to `https://your-domain`.
-7. Follow **Host it live** in [README.md](README.md).
-8. After HTTPS works, set `DJANGO_SECURE_SSL=true` and restart.
+1. DNS A record points at the server (or you are using the IP).
+2. `.env` exists (copied from `.env.example`).
+3. `DJANGO_SECRET_KEY` is a new random key.
+4. `DJANGO_DEBUG=false`.
+5. `DJANGO_ALLOWED_HOSTS` is the domain **without** `https://`.
+6. `DJANGO_CSRF_TRUSTED_ORIGINS` is `https://your-domain`.
+7. Nginx `server_name` is the same domain.
+8. Commands in **[README.md](README.md)** section 5 are done.
+9. After HTTPS works, `DJANGO_SECURE_SSL=true` and restart Gunicorn.
 
----
-
-## 5. What you do **not** change for deploy
-
-| Path | Why |
-|------|-----|
-| `submission_portal/submission_portal/settings.py` | Reads `.env`. Do not paste production secrets here. |
-| `submission_portal/submissions/templates/` | No localhost URLs. The status link comes from the current request. |
-| `README.md` | Local `http://127.0.0.1:8000/` examples stay for laptop use. |
-| `submission_portal/submissions/static/` | CSS and fonts. `collectstatic` copies them. |
-
-If a form works on your laptop but CSRF-fails online, `DJANGO_CSRF_TRUSTED_ORIGINS` is the first place to look.
+Nothing in `settings.py` or the templates should have been edited for the domain.
