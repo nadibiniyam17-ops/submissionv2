@@ -59,13 +59,22 @@ input, select, textarea, button {
     box-shadow: 0 4px 12px rgba(0,0,0,0.05);
 }
 .header {
-    display: block;
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    justify-content: flex-start;
+    gap: 6px;
     margin-bottom: 20px;
+    width: 100%;
 }
 .header h2 {
-    margin: 0 0 6px;
+    display: block;
+    width: 100%;
+    margin: 0;
 }
 .header p {
+    display: block;
+    width: 100%;
     margin: 0;
     color: #4b5563;
 }
@@ -75,11 +84,6 @@ input, select, textarea, button {
     padding: 0 8px;
     color: #1e3a8a;
     line-height: 1.45;
-}
-.container .status-note {
-    max-width: none;
-    margin: 18px 0 0;
-    padding: 0;
 }
 .field-error {
     margin: 8px 0 0;
@@ -396,6 +400,10 @@ th{
     font-size: 14px;
     color: #4b5563;
     line-height: 1.45;
+}
+
+.tracking-hint + .tracking-hint {
+    margin-top: 10px;
 }
 
 .success-actions {

@@ -110,8 +110,8 @@
 
             <button type="submit" class="submitbutton"><i class="fa-solid fa-paper-plane"></i> SUBMIT</button>
         </form>
-        <p class="status-note">You can check the status of your paper at <a href="{% url 'check_status' %}">{{ status_check_url }}</a>.</p>
     </div>
+    <p class="status-note">You can check the status of your paper at <a href="{% url 'check_status' %}">{{ status_check_url }}</a>.</p>
 {% endblock %}
 
 {% block extra_js %}

@@ -24,16 +24,5 @@
             </p>
         </div>
         {% endif %}
-        {% if saved_codes %}
-        <div class="saved-codes">
-            <p class="tracking-label">Codes saved in this browser</p>
-            <ul>
-                {% for item in saved_codes %}
-                <li><span class="tracking-code-inline">{{ item.code }}</span> — {{ item.title }}</li>
-                {% endfor %}
-            </ul>
-        </div>
-        {% endif %}
-        <p class="page-nav"><a href="{% url 'submit_paper' %}">Submit a paper</a></p>
     </div>
 {% endblock %}

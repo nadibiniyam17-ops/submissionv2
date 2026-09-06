@@ -22,7 +22,6 @@ from .models import Submission, normalize_tracking_code
 from .ratelimit import rate_limit
 
 
-SESSION_TRACKING_CODES = 'saved_tracking_codes'
 SESSION_LAST_CODE = 'last_tracking_code'
 SESSION_LAST_TITLE = 'last_submission_title'
 
@@ -74,12 +73,6 @@ def safe_next_url(request):
 
 
 def remember_tracking_code(request, code, title):
-    saved = [
-        entry for entry in request.session.get(SESSION_TRACKING_CODES, [])
-        if entry.get('code') != code
-    ]
-    saved.insert(0, {'code': code, 'title': title})
-    request.session[SESSION_TRACKING_CODES] = saved[:20]
     request.session[SESSION_LAST_CODE] = code
     request.session[SESSION_LAST_TITLE] = title
     request.session.modified = True
@@ -155,7 +148,6 @@ def check_status(request):
         'submission': submission,
         'error': error,
         'tracking_code': tracking_code,
-        'saved_codes': request.session.get(SESSION_TRACKING_CODES, []),
     }, status=429 if rate_limited else 200)
 
 

@@ -11,9 +11,9 @@
     <div class="successpage">
         {% if missing %}
             <h1 class="successtitle">Confirmation unavailable</h1>
-            <p class="successmessage">This page only shows the tracking code in the same browser that submitted the paper. If you still have this browser open, check the codes saved on the status page. An admin can look the code up if it was lost.</p>
+            <p class="successmessage">The tracking code is only shown in the browser that submitted the paper. If you wrote the code down, enter it on the status page. If it is lost, an admin can look it up.</p>
             <div class="tracking-box">
-                <p class="tracking-hint">You can check the status of your paper at <a href="{% url 'check_status' %}">{{ status_check_url }}</a>.</p>
+                <p class="tracking-hint">Status page: <a href="{% url 'check_status' %}">{{ status_check_url }}</a></p>
             </div>
         {% else %}
             <i class="fa-solid fa-circle-check successtick"></i>
@@ -22,12 +22,12 @@
             <div class="tracking-box">
                 <p class="tracking-label">Your tracking code</p>
                 <p class="tracking-code">{{ tracking_code }}</p>
-                <p class="tracking-hint">Save this code. You can check the status of your paper at <a href="{% url 'check_status' %}">{{ status_check_url }}</a>. If you close this tab, reopen this page or the status page in the same browser to see the code again.</p>
+                <p class="tracking-hint">Write this code down. Enter it at <a href="{% url 'check_status' %}">{{ status_check_url }}</a> to see whether the paper is pending, under review, or reviewed.</p>
+                <p class="tracking-hint">This page shows the latest submission from this browser. Write each code down so the paper's status can be checked</p>
             </div>
         {% endif %}
         <div class="success-actions">
             <a href="{% url 'submit_paper' %}" class="submitbutton">Submit another paper</a>
-            <a href="{% url 'check_status' %}" class="submitbutton">Check status</a>
         </div>
     </div>
 {% endblock %}

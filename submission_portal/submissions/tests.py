@@ -200,9 +200,10 @@ class SubmitAndStatusTests(TestCase):
         self.assertEqual(limited.status_code, 429)
         self.assertContains(limited, 'Too many attempts', status_code=429)
 
-    def test_status_page_has_way_back_to_submit(self):
+    def test_status_page_has_no_submit_link(self):
         response = self.client.get(reverse('check_status'))
-        self.assertContains(response, reverse('submit_paper'))
+        self.assertNotContains(response, 'Submit a paper')
+        self.assertNotContains(response, 'page-nav')
 
     def test_invalid_date_does_not_500(self):
         response = self.client.post(
@@ -239,6 +240,15 @@ class SubmitAndStatusTests(TestCase):
     def test_status_url_follows_request_host(self):
         response = self.client.get(reverse('submit_paper'), HTTP_HOST='127.0.0.1:8000')
         self.assertContains(response, 'http://127.0.0.1:8000/status/')
+
+    def test_status_url_sits_outside_form_card(self):
+        html = self.client.get(reverse('submit_paper')).content.decode()
+        form_end = html.find('</form>')
+        card_end = html.find('</div>', form_end)
+        note = html.find('class="status-note"')
+        self.assertGreater(form_end, 0)
+        self.assertGreater(note, card_end)
+        self.assertNotContains(self.client.get(reverse('submit_paper')), 'Submit a paper')
 
 
 class AuthTests(TestCase):

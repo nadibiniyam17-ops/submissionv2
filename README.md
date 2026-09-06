@@ -379,27 +379,9 @@ EnvironmentFile=/home/YOUR_USER/submissionv2/.env
 
 The Ubuntu + Nginx + systemd + Certbot path above is one option. These also work.
 
-### Docker
-
-From the project root, with a filled-in `.env`:
-
-```bash
-docker compose up --build
-```
-
-The app listens on port 8000. WhiteNoise serves `/static/`. Uploads stay in a volume. Put Nginx or a PaaS load balancer in front for HTTPS.
-
-Postgres instead of SQLite:
-
-```bash
-docker compose --profile postgres up --build
-```
-
-Set `DATABASE_URL=postgres://portal:portal@db:5432/portal` in `.env`.
-
 ### Windows Server
 
-Use **Docker Desktop** and the same `docker compose` command, or run Gunicorn/Waitress on the machine and put IIS or Nginx for Windows in front. Bind the public site to HTTPS. Copy `.env.example` to `.env` the same way. This project does not ship an IIS `web.config`.
+Run Gunicorn or Waitress on the machine and put IIS or Nginx for Windows in front. Bind the public site to HTTPS. Copy `.env.example` to `.env` the same way. This project does not ship an IIS `web.config`.
 
 ### PaaS (Render, Railway, Fly, and similar)
 
