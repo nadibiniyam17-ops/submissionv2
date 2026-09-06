@@ -4,25 +4,61 @@ Django app for submitting research papers as PDFs and reviewing them from an adm
 
 You need **Python 3.12 or newer**.
 
-Install pinned dependencies from `requirements.txt` (Django 6.1, Gunicorn, WhiteNoise, and the Postgres driver). Do not run a bare `pip install django` — a newer Django can break the app.
-
 **Putting it on the internet?** Copy `.env.example` to `.env` and follow **[setup.md](setup.md)**. Do not edit `settings.py` by hand; `git pull` would overwrite those edits. Do not use `runserver` as your public site.
+
+---
+
+## What these files are
+
+Stay in the **project root** — the folder that contains `README.md`, `requirements.txt`, and `submission_portal`. That is where every command below runs, unless a step says to `cd submission_portal`.
+
+| File | What you do with it |
+|------|---------------------|
+| `requirements.txt` | **Do not run this file.** It is a package list. Install it with `python -m pip install -r requirements.txt` (see below). |
+| `.env.example` | Template only. Copy it to `.env`. The app never reads `.env.example`. |
+| `.env` | You create this. Laptop: optional (defaults work on `127.0.0.1`). Server: required. See **[setup.md](setup.md)**. Gitignored. |
+| `.secret_key` | Auto-created on a laptop if `DJANGO_SECRET_KEY` is empty. On a server, set the key in `.env` instead. Gitignored. |
+| `setup.md` | How to fill `.env` for a public domain. Not used at runtime. |
+| `README.md` | This file. How to install and run. |
+
+---
+
+## Install the packages (`requirements.txt`)
+
+Wrong commands look like they “do not work”: `pip install requirements.txt` (missing `-r`), `python requirements.txt`, or running the command inside `submission_portal` where the file is not.
+
+From the **project root**, PowerShell:
+
+```powershell
+python -m venv venv
+.\venv\Scripts\Activate.ps1
+python -m pip install -r requirements.txt
+```
+
+The `-r` means “read this file as a list.” Without it, pip looks on the internet for a package named `requirements.txt` and fails.
+
+If Activate fails, skip it and call the venv pip directly (still from the project root):
+
+```powershell
+python -m venv venv
+.\venv\Scripts\python.exe -m pip install -r requirements.txt
+```
+
+You should see Django, Gunicorn, WhiteNoise, and psycopg download. Do not run a bare `pip install django` — a newer Django can break the app.
 
 ---
 
 ## Run it on your computer (PowerShell)
 
-Stay in the **project root** (the folder that contains `README.md` and `submission_portal`). Do not `cd` into `submission_portal` until the steps below say so — `venv` lives in the root, not inside `submission_portal`.
+After the install above:
 
 ```powershell
-python -m venv venv
-.\venv\Scripts\Activate.ps1
-pip install -r requirements.txt
-
 cd submission_portal
 python manage.py migrate
 python manage.py runserver
 ```
+
+If you skipped Activate, use `..\venv\Scripts\python.exe` instead of `python` for those two commands.
 
 After `Activate.ps1`, the prompt should start with `(venv)`. If it does not, Django is not available and you will get `No module named 'django'`.
 
@@ -33,15 +69,6 @@ Set-ExecutionPolicy -Scope CurrentUser RemoteSigned
 ```
 
 Then run `.\venv\Scripts\Activate.ps1` again.
-
-You can skip activation and call the venv Python directly (from the project root):
-
-```powershell
-.\venv\Scripts\python.exe -m pip install -r requirements.txt
-cd submission_portal
-..\venv\Scripts\python.exe manage.py migrate
-..\venv\Scripts\python.exe manage.py runserver
-```
 
 Open **http://127.0.0.1:8000/**
 
@@ -55,9 +82,7 @@ Open **http://127.0.0.1:8000/**
 
 These addresses are for your laptop only. On a real server they become `https://your-domain/...`. See **[setup.md](setup.md)** for every line in the code you must change.
 
-After you submit a paper, the success page shows a **tracking code** (for example `RS-8F3K2P`). Save it. The status link is under the form card on submit and inside the success card after submit. Open `/status/` and enter the code to see whether the paper is pending, under review, or reviewed.
-
-If you close the tab, reopen `/submitted/` or `/status/` in the **same browser** — the code is kept in that browser session. There is no email resend. If the browser data is gone, an admin can still look the code up on the dashboard. The success page is not keyed by a public sequential id.
+After you submit a paper, the success page shows a **tracking code** (for example `RS-8F3K2P`). Write it down. The status URL sits under the form card on submit. Open `/status/` and enter the code to see whether the paper is pending, under review, or reviewed. `/submitted/` shows only the latest code from this browser. The status page does not store codes. If the code is lost, an admin can look it up. There is no email resend.
 
 `/setup/` works only while no admin exists. After that it shows a closed page and you sign in at `/login/`. Only the **first** admin (the account created at `/setup/`) can add more admins from the dashboard. Later admins can review papers but cannot open **Add admin**.
 
@@ -77,7 +102,7 @@ cd submission_portal
 python manage.py runserver
 ```
 
-If `venv` does not exist yet, create it first with `python -m venv venv` and `pip install -r requirements.txt` (from the project root, venv activated).
+If `venv` does not exist yet, create it first from the project root: `python -m venv venv` then `python -m pip install -r requirements.txt` (venv activated).
 
 **`pip` cannot reach pypi.org / `getaddrinfo failed`**
 

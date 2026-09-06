@@ -1,10 +1,20 @@
 # Before you deploy: what to change, and where
 
-Read this **before** you put the site on a real server. The live-hosting commands are in [README.md](README.md). This file is only the **configuration**.
+Read this **before** you put the site on a real server. Install steps and Gunicorn/Nginx commands are in [README.md](README.md). This file is only the **configuration** (`.env`).
+
+Install packages first, from the project root (the folder that contains `requirements.txt`):
+
+```powershell
+python -m venv venv
+.\venv\Scripts\Activate.ps1
+python -m pip install -r requirements.txt
+```
+
+`requirements.txt` is a list, not a program. The `-r` flag is required. Then come back here to create `.env`.
 
 Do **not** edit `settings.py` for deploy. That file reads environment variables. If you edit it by hand, `git pull` can wipe the edits.
 
-Copy [`.env.example`](.env.example) to `.env` in the project root and change the values there. `.env` is gitignored.
+Copy [`.env.example`](.env.example) to `.env` in the project root and change the values there. `.env` is gitignored. The running app reads `.env`, not `.env.example`.
 
 Locally the site is `http://127.0.0.1:8000/`. On the internet it must be **your** address, for example `https://papers.example.com`.
 
