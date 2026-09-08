@@ -236,7 +236,7 @@ python manage.py collectstatic --noinput
 Still in `~/submissionv2/submission_portal`, venv active:
 
 ```bash
-gunicorn submission_portal.wsgi:application --bind 127.0.0.1:8000
+gunicorn --config gunicorn.conf.py submission_portal.wsgi:application
 ```
 
 In another SSH window:
@@ -265,8 +265,7 @@ WorkingDirectory=/home/YOUR_USER/submissionv2/submission_portal
 Environment="PATH=/home/YOUR_USER/submissionv2/venv/bin"
 EnvironmentFile=/home/YOUR_USER/submissionv2/.env
 ExecStart=/home/YOUR_USER/submissionv2/venv/bin/gunicorn \
-    --workers 3 \
-    --bind 127.0.0.1:8000 \
+    --config gunicorn.conf.py \
     submission_portal.wsgi:application
 Restart=always
 
@@ -394,7 +393,7 @@ Run Gunicorn or Waitress, put IIS or Nginx for Windows in front, use HTTPS. Crea
 Set the same variables as `.env`. Use a Postgres add-on and `DATABASE_URL`. Start command:
 
 ```bash
-cd submission_portal && python manage.py migrate && python manage.py collectstatic --noinput && gunicorn submission_portal.wsgi:application --bind 0.0.0.0:$PORT
+cd submission_portal && python manage.py migrate && python manage.py collectstatic --noinput && gunicorn --config gunicorn.conf.py --bind 0.0.0.0:$PORT submission_portal.wsgi:application
 ```
 
 WhiteNoise serves CSS when there is no Nginx.

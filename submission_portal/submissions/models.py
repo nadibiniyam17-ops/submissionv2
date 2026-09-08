@@ -1,4 +1,6 @@
 import secrets
+import uuid
+from pathlib import Path
 
 from django.conf import settings
 from django.core.validators import FileExtensionValidator, MinValueValidator
@@ -20,6 +22,13 @@ def normalize_tracking_code(raw):
     return code
 
 
+def pdf_upload_to(instance, filename):
+    suffix = Path(filename).suffix.lower()
+    if suffix != '.pdf':
+        suffix = '.pdf'
+    return f'submissions_pdfs/{uuid.uuid4().hex}{suffix}'
+
+
 class Submission(models.Model):
     STATUS_CHOICES = [
         ('pending', 'Pending'),
@@ -35,7 +44,7 @@ class Submission(models.Model):
     publication_date = models.DateField()
     doi = models.CharField(max_length=255, blank=True, null=True)
     pdf = models.FileField(
-        upload_to='submissions_pdfs/',
+        upload_to=pdf_upload_to,
         validators=[FileExtensionValidator(allowed_extensions=['pdf'])],
     )
     indexed_on = models.CharField(max_length=100)
@@ -52,6 +61,12 @@ class Submission(models.Model):
     )
     reviewed_at = models.DateTimeField(null=True, blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        indexes = [
+            models.Index(fields=['status'], name='submission_status_idx'),
+            models.Index(fields=['created_at'], name='submission_created_idx'),
+        ]
 
     def save(self, *args, **kwargs):
         if self.tracking_code:

@@ -10,3 +10,5 @@ from django.urls import include, path
 urlpatterns = [
     path('', include('submissions.urls')),
 ]
+
+handler403 = 'submissions.views.csrf_failure'

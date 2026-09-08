@@ -3,19 +3,20 @@ from functools import wraps
 
 from django.conf import settings
 from django.contrib.auth import authenticate, login, logout
-from django.contrib.auth.decorators import login_required
 from django.contrib.auth.models import User
 from django.contrib.auth.password_validation import validate_password
 from django.core.exceptions import ValidationError
 from django.core.paginator import Paginator
-from django.db.models import Q
-from django.http import FileResponse, Http404
+from django.db.models import Count, Q
+from django.http import FileResponse, Http404, JsonResponse
+from django.middleware.csrf import get_token
 from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse
 from django.utils import timezone
 from django.utils.http import url_has_allowed_host_and_scheme
+from django.views.decorators.cache import never_cache
 from django.views.decorators.csrf import ensure_csrf_cookie
-from django.views.decorators.http import require_POST
+from django.views.decorators.http import require_GET, require_POST
 
 from .forms import SubmissionForm, SubmissionStatusForm, value_or_other  # noqa: F401
 from .models import Submission, normalize_tracking_code
@@ -36,13 +37,17 @@ def user_is_first_admin(user):
 
 
 def staff_required(view):
-    @login_required
     @wraps(view)
     def wrapped(request, *args, **kwargs):
+        if not request.user.is_authenticated:
+            return render(request, 'submissions/login.html', {
+                'next': request.get_full_path(),
+            })
         if not request.user.is_staff:
             return render(request, 'submissions/login.html', {
                 'error': 'This account cannot access the review dashboard.',
-            }, status=403)
+                'next': request.get_full_path(),
+            })
         return view(request, *args, **kwargs)
     return wrapped
 
@@ -85,6 +90,7 @@ def field_value(form, name, default=''):
     return default if value is None else value
 
 
+@never_cache
 @ensure_csrf_cookie
 def submit_paper(request):
     if request.method == 'POST':
@@ -113,6 +119,7 @@ def submit_paper(request):
     })
 
 
+@never_cache
 def submit_success(request):
     tracking_code = request.session.get(SESSION_LAST_CODE)
     title = request.session.get(SESSION_LAST_TITLE)
@@ -124,6 +131,7 @@ def submit_success(request):
     })
 
 
+@never_cache
 @ensure_csrf_cookie
 @rate_limit('status', settings.STATUS_RATE_LIMIT, settings.STATUS_RATE_WINDOW)
 def check_status(request):
@@ -151,12 +159,13 @@ def check_status(request):
     }, status=429 if rate_limited else 200)
 
 
+@never_cache
 @ensure_csrf_cookie
 def setup_admin(request):
     if User.objects.filter(is_superuser=True).exists():
         return render(request, 'submissions/setup.html', {
             'setup_locked': True,
-        }, status=403)
+        })
 
     if request.method == 'POST':
         username = request.POST.get('username')
@@ -173,6 +182,7 @@ def setup_admin(request):
     return render(request, 'submissions/setup.html')
 
 
+@never_cache
 @ensure_csrf_cookie
 @rate_limit('login', settings.LOGIN_RATE_LIMIT, settings.LOGIN_RATE_WINDOW)
 def admin_login(request):
@@ -208,12 +218,13 @@ def admin_logout(request):
 
 
 @staff_required
+@never_cache
 @ensure_csrf_cookie
 def create_admin(request):
     if not user_is_first_admin(request.user):
         return render(request, 'submissions/create_admin.html', {
             'create_forbidden': True,
-        }, status=403)
+        })
 
     error = None
     success = None
@@ -251,6 +262,7 @@ def create_admin(request):
 
 
 @staff_required
+@never_cache
 @ensure_csrf_cookie
 def submission_list(request):
     q = request.GET.get('q', '').strip()
@@ -271,26 +283,32 @@ def submission_list(request):
         request.GET.get('page')
     )
 
-    all_subs = Submission.objects.all()
+    stats = Submission.objects.aggregate(
+        total_count=Count('pk'),
+        pending_count=Count('pk', filter=Q(status='pending')),
+        under_review_count=Count('pk', filter=Q(status='under_review')),
+        reviewed_count=Count('pk', filter=Q(status='reviewed')),
+    )
     context = {
         'submissions': page_obj,
         'page_obj': page_obj,
         'q': q,
         'status': status,
-        'total_count': all_subs.count(),
-        'pending_count': all_subs.filter(status='pending').count(),
-        'under_review_count': all_subs.filter(status='under_review').count(),
-        'reviewed_count': all_subs.filter(status='reviewed').count(),
         'can_create_admin': user_is_first_admin(request.user),
         'status_choices': Submission.STATUS_CHOICES,
+        **stats,
     }
     return render(request, 'submissions/list.html', context)
 
 
 @staff_required
+@never_cache
 @ensure_csrf_cookie
 def submission_detail(request, pk):
-    submission = get_object_or_404(Submission, pk=pk)
+    submission = get_object_or_404(
+        Submission.objects.select_related('reviewed_by'),
+        pk=pk,
+    )
     form = SubmissionStatusForm(instance=submission)
 
     if request.method == 'POST':
@@ -320,3 +338,15 @@ def download_pdf(request, pk):
         filename=os.path.basename(submission.pdf.name),
         content_type='application/pdf',
     )
+
+
+@never_cache
+@require_GET
+def csrf_token_json(request):
+    return JsonResponse({'csrfToken': get_token(request)})
+
+
+def csrf_failure(request, reason='', exception=None):
+    return render(request, 'submissions/csrf_failure.html', {
+        'reason': reason,
+    })

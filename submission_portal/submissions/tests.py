@@ -8,7 +8,7 @@ from django.apps import apps
 from django.contrib.auth.models import User
 from django.core.cache import cache
 from django.core.files.uploadedfile import SimpleUploadedFile
-from django.test import TestCase, override_settings
+from django.test import Client, TestCase, override_settings
 from django.urls import reverse
 
 from submissions.forms import value_or_other
@@ -29,6 +29,17 @@ from submissions.models import (
 
 
 PDF_BYTES = b'%PDF-1.4\n1 0 obj\n<<>>\nendobj\ntrailer\n<<>>\n%%EOF\n'
+
+
+def csrf_token_from(response):
+    html = response.content.decode()
+    marker = 'name="csrfmiddlewaretoken" value="'
+    start = html.find(marker)
+    if start < 0:
+        return ''
+    start += len(marker)
+    end = html.find('"', start)
+    return html[start:end]
 
 
 def make_pdf(name='paper.pdf', content=PDF_BYTES, content_type='application/pdf'):
@@ -151,6 +162,9 @@ class SubmitAndStatusTests(TestCase):
         submission = Submission.objects.get()
         self.assertEqual(submission.status, 'pending')
         self.assertTrue(submission.tracking_code.startswith('RS-'))
+        self.assertTrue(submission.pdf.name.startswith('submissions_pdfs/'))
+        self.assertTrue(submission.pdf.name.endswith('.pdf'))
+        self.assertNotIn('paper.pdf', submission.pdf.name)
 
     def test_success_page_uses_session_not_public_id(self):
         self.client.post(
@@ -235,7 +249,9 @@ class SubmitAndStatusTests(TestCase):
             pdf=make_pdf('private.pdf'),
         )
         self.assertEqual(self.client.get(f'/media/{submission.pdf.name}').status_code, 404)
-        self.assertEqual(self.client.get(reverse('download_pdf', args=[submission.pk])).status_code, 302)
+        pdf = self.client.get(reverse('download_pdf', args=[submission.pk]))
+        self.assertEqual(pdf.status_code, 200)
+        self.assertContains(pdf, 'Admin login')
 
     def test_status_url_follows_request_host(self):
         response = self.client.get(reverse('submit_paper'), HTTP_HOST='127.0.0.1:8000')
@@ -256,26 +272,36 @@ class AuthTests(TestCase):
         cache.clear()
         self.admin = User.objects.create_superuser('firstadmin', '', 'StrongPass123')
 
-    def test_setup_returns_403_when_admin_exists(self):
+    def test_setup_stays_usable_when_admin_exists(self):
         response = self.client.get(reverse('setup_admin'))
-        self.assertEqual(response.status_code, 403)
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, 'Setup is closed')
+        self.assertNotIn(response.status_code, {303, 403})
+        slashless = self.client.get('/setup')
+        self.assertEqual(slashless.status_code, 200)
+        self.assertNotIn(slashless.status_code, {301, 303, 403})
 
-    def test_anonymous_dashboard_redirects_to_login(self):
+    def test_anonymous_dashboard_shows_login(self):
         response = self.client.get(reverse('submission_list'))
-        self.assertEqual(response.status_code, 302)
-        self.assertIn(reverse('admin_login'), response['Location'])
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, 'Admin login')
+        self.assertNotIn(response.status_code, {303, 403})
 
     def test_non_staff_user_cannot_open_dashboard(self):
         user = User.objects.create_user('viewer', password='StrongPass123')
         self.client.force_login(user)
         response = self.client.get(reverse('submission_list'))
-        self.assertEqual(response.status_code, 403)
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, 'This account cannot access the review dashboard.')
+        self.assertNotIn(response.status_code, {303, 403})
 
     def test_second_admin_cannot_create_admins(self):
         reviewer = User.objects.create_user('reviewer', password='StrongPass123', is_staff=True)
         self.client.force_login(reviewer)
         response = self.client.get(reverse('create_admin'))
-        self.assertEqual(response.status_code, 403)
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, 'Not allowed')
+        self.assertNotIn(response.status_code, {303, 403})
 
     def test_login_honors_safe_next(self):
         response = self.client.post(
@@ -337,8 +363,118 @@ class ReviewAuditTests(TestCase):
     def test_detail_shows_created_at(self):
         response = self.client.get(reverse('submission_detail', args=[self.submission.pk]))
         self.assertContains(response, 'Submitted:')
+        html = response.content.decode()
+        submitted = html.find('Submitted:')
+        tracking = html.find('Tracking code:')
+        pdf = html.find('View/Download the PDF')
+        status = html.find('class="statusform"')
+        self.assertLess(submitted, tracking)
+        self.assertLess(tracking, pdf)
+        self.assertLess(pdf, status)
 
     def test_staff_can_download_pdf(self):
         response = self.client.get(reverse('download_pdf', args=[self.submission.pk]))
         self.assertEqual(response.status_code, 200)
         self.assertEqual(response['Content-Type'], 'application/pdf')
+
+
+@override_settings(MEDIA_ROOT=tempfile.mkdtemp())
+class StressAndCsrfTests(TestCase):
+    def setUp(self):
+        cache.clear()
+        self.csrf_client = Client(enforce_csrf_checks=True)
+
+    def test_repeated_submits_then_setup_is_not_an_error(self):
+        for index in range(5):
+            page = self.csrf_client.get(reverse('submit_paper'))
+            token = csrf_token_from(page)
+            self.assertTrue(token)
+            response = self.csrf_client.post(
+                reverse('submit_paper'),
+                data={
+                    **submission_payload(title=f'Stress paper {index}'),
+                    'csrfmiddlewaretoken': token,
+                    'pdf': make_pdf(f'stress-{index}.pdf'),
+                },
+            )
+            self.assertEqual(response.status_code, 302)
+            follow = self.csrf_client.get(response['Location'])
+            self.assertEqual(follow.status_code, 200)
+
+        setup = self.csrf_client.get(reverse('setup_admin'))
+        self.assertEqual(setup.status_code, 200)
+        self.assertContains(setup, 'Admin setup')
+
+        created = self.csrf_client.post(reverse('setup_admin'), {
+            'username': 'setupadmin',
+            'password': 'StrongPass123',
+            'csrfmiddlewaretoken': csrf_token_from(setup),
+        })
+        self.assertEqual(created.status_code, 302)
+        self.assertTrue(User.objects.filter(username='setupadmin').exists())
+
+        locked = self.csrf_client.get(reverse('setup_admin'))
+        self.assertEqual(locked.status_code, 200)
+        self.assertContains(locked, 'Setup is closed')
+
+    def test_csrf_failure_is_a_usable_page(self):
+        self.csrf_client.get(reverse('check_status'))
+        response = self.csrf_client.post(
+            reverse('check_status'),
+            {'tracking_code': 'RS-XXXXXX', 'csrfmiddlewaretoken': 'not-a-real-token'},
+        )
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, 'Sorry, please try again')
+        self.assertContains(response, 'error-x')
+        self.assertNotContains(response, 'CSRF verification failed')
+        self.assertNotIn(response.status_code, {303, 403})
+
+    def test_form_pages_are_not_cached(self):
+        response = self.client.get(reverse('submit_paper'))
+        self.assertIn('no-store', response['Cache-Control'])
+        setup = self.client.get(reverse('setup_admin'))
+        self.assertIn('no-store', setup['Cache-Control'])
+
+    def test_csrf_endpoint_issues_a_usable_token(self):
+        page = self.csrf_client.get(reverse('submit_paper'))
+        self.assertTrue(csrf_token_from(page))
+        issued = self.csrf_client.get(reverse('csrf_token'))
+        self.assertEqual(issued.status_code, 200)
+        token = issued.json()['csrfToken']
+        self.assertTrue(token)
+        response = self.csrf_client.post(
+            reverse('submit_paper'),
+            data={
+                **submission_payload(title='Token refresh paper'),
+                'csrfmiddlewaretoken': token,
+                'pdf': make_pdf('token-refresh.pdf'),
+            },
+        )
+        self.assertEqual(response.status_code, 302)
+
+    def test_login_does_not_break_later_posts_when_token_is_refreshed(self):
+        User.objects.create_superuser('firstadmin', '', 'StrongPass123')
+        stale_page = self.csrf_client.get(reverse('check_status'))
+        stale_token = csrf_token_from(stale_page)
+        login_page = self.csrf_client.get(reverse('admin_login'))
+        login_response = self.csrf_client.post(reverse('admin_login'), {
+            'username': 'firstadmin',
+            'password': 'StrongPass123',
+            'csrfmiddlewaretoken': csrf_token_from(login_page),
+        })
+        self.assertEqual(login_response.status_code, 302)
+
+        stale_post = self.csrf_client.post(reverse('check_status'), {
+            'tracking_code': 'RS-XXXXXX',
+            'csrfmiddlewaretoken': stale_token,
+        })
+        self.assertEqual(stale_post.status_code, 200)
+        self.assertContains(stale_post, 'Sorry, please try again')
+
+        fresh = self.csrf_client.get(reverse('csrf_token')).json()['csrfToken']
+        ok_post = self.csrf_client.post(reverse('check_status'), {
+            'tracking_code': 'RS-XXXXXX',
+            'csrfmiddlewaretoken': fresh,
+        })
+        self.assertEqual(ok_post.status_code, 200)
+        self.assertContains(ok_post, 'No submission found')

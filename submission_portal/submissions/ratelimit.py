@@ -17,12 +17,15 @@ def rate_limit(key_prefix, limit, window):
             if request.method != 'POST':
                 return view(request, *args, **kwargs)
             cache_key = f'{key_prefix}:{client_ip(request)}'
-            count = cache.get(cache_key, 0)
-            if count >= limit:
-                request.rate_limited = True
-                return view(request, *args, **kwargs)
-            cache.set(cache_key, count + 1, window)
-            request.rate_limited = False
+            if cache.add(cache_key, 1, window):
+                count = 1
+            else:
+                try:
+                    count = cache.incr(cache_key)
+                except ValueError:
+                    cache.set(cache_key, 1, window)
+                    count = 1
+            request.rate_limited = count > limit
             return view(request, *args, **kwargs)
         return wrapped
     return decorator

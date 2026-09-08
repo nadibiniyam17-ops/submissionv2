@@ -59,11 +59,18 @@ def _secret_key():
 
 def _database():
     url = os.environ.get('DATABASE_URL', '').strip()
+    conn_max_age = int(os.environ.get('DJANGO_CONN_MAX_AGE', '60'))
     if not url:
         sqlite_path = os.environ.get('SQLITE_PATH', '').strip()
         return {
             'ENGINE': 'django.db.backends.sqlite3',
             'NAME': Path(sqlite_path) if sqlite_path else BASE_DIR / 'db.sqlite3',
+            'CONN_MAX_AGE': conn_max_age,
+            'CONN_HEALTH_CHECKS': True,
+            'OPTIONS': {
+                'timeout': 30,
+                'transaction_mode': 'IMMEDIATE',
+            },
         }
     parsed = urlparse(url)
     scheme = parsed.scheme.split('+')[0]
@@ -76,6 +83,11 @@ def _database():
         'PASSWORD': unquote(parsed.password or ''),
         'HOST': parsed.hostname or '',
         'PORT': str(parsed.port or ''),
+        'CONN_MAX_AGE': conn_max_age,
+        'CONN_HEALTH_CHECKS': True,
+        'OPTIONS': {
+            'connect_timeout': 10,
+        },
     }
 
 
@@ -95,6 +107,16 @@ PUBLIC_BASE_URL = os.environ.get('PUBLIC_BASE_URL', '').rstrip('/')
 
 LOGIN_URL = 'admin_login'
 LOGIN_REDIRECT_URL = 'submission_list'
+CSRF_FAILURE_VIEW = 'submissions.views.csrf_failure'
+CSRF_USE_SESSIONS = True
+SESSION_ENGINE = 'django.contrib.sessions.backends.cached_db'
+SESSION_COOKIE_HTTPONLY = True
+SESSION_COOKIE_SAMESITE = 'Lax'
+SESSION_SAVE_EVERY_REQUEST = False
+
+FILE_UPLOAD_MAX_MEMORY_SIZE = 1 * 1024 * 1024
+DATA_UPLOAD_MAX_MEMORY_SIZE = 2 * 1024 * 1024
+DATA_UPLOAD_MAX_NUMBER_FIELDS = 200
 
 MAX_PDF_BYTES = 20 * 1024 * 1024
 LOGIN_RATE_LIMIT = 5
@@ -111,7 +133,7 @@ INSTALLED_APPS = [
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
-    'submissions',
+    'submissions.apps.SubmissionsConfig',
 ]
 
 MIDDLEWARE = [
@@ -135,6 +157,7 @@ TEMPLATES = [
         'OPTIONS': {
             'context_processors': [
                 'django.template.context_processors.request',
+                'django.template.context_processors.csrf',
                 'django.contrib.auth.context_processors.auth',
                 'django.contrib.messages.context_processors.messages',
             ],
@@ -187,10 +210,16 @@ STORAGES = {
 
 CACHES = {
     'default': {
-        'BACKEND': 'django.core.cache.backends.locmem.LocMemCache',
-        'LOCATION': 'submission-portal',
+        'BACKEND': 'django.core.cache.backends.db.DatabaseCache',
+        'LOCATION': 'portal_cache',
+        'TIMEOUT': 300,
+        'OPTIONS': {
+            'MAX_ENTRIES': 20000,
+        },
     },
 }
+
+WHITENOISE_MAX_AGE = 0 if DEBUG else 60 * 60 * 24 * 7
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 

@@ -7,7 +7,6 @@
         <a href="{% url 'submission_list' %}" class="back-link">←Back to dashboard</a>
         <h2>{{ submission.title }}</h2>
         <hr>
-        <p><strong>Tracking code:</strong> <span class="tracking-code-inline">{{ submission.tracking_code }}</span></p>
         <p><strong>Submitted:</strong> {{ submission.created_at }}</p>
         <p><strong>Article type:</strong> {{ submission.article_type }}</p>
         <p><strong>Number of authors:</strong> {{ submission.author_number }}</p>
@@ -19,6 +18,14 @@
         <p><strong>Affiliation:</strong> {{ submission.affiliations }}</p>
         {% if submission.reviewed_by %}
         <p><strong>Last reviewed by:</strong> {{ submission.reviewed_by.username }}{% if submission.reviewed_at %} at {{ submission.reviewed_at }}{% endif %}</p>
+        {% endif %}
+
+        <p><strong>Tracking code:</strong> <span class="tracking-code-inline">{{ submission.tracking_code }}</span></p>
+
+        {% if submission.pdf %}
+        <div class="pdf">
+            <a href="{% url 'download_pdf' submission.pk %}" target="_blank" class="submitbutton">View/Download the PDF</a>
+        </div>
         {% endif %}
 
         <form method="post" class="statusform">
@@ -37,11 +44,5 @@
                 <span class="statusbadge status-{{ submission.status }}">{{ submission.get_status_display }}</span>
             </p>
         </form>
-
-        {% if submission.pdf %}
-        <div class="pdf">
-            <a href="{% url 'download_pdf' submission.pk %}" target="_blank" class="submitbutton">View/Download the PDF</a>
-        </div>
-        {% endif %}
     </div>
 {% endblock %}

@@ -352,6 +352,14 @@ th{
     margin-bottom: 20px;
 }
 
+.error-x {
+    display: block;
+    margin: 0 auto 20px;
+    width: 88px;
+    height: 88px;
+    line-height: 0;
+}
+
 .successtitle {
     font-size: 36px;
     font-weight: 700;
@@ -565,8 +573,12 @@ th{
     color: #166534;
 }
 
+.pdf {
+    margin: 20px 0 0;
+}
+
 .statusform {
-    margin: 24px 0;
+    margin: 24px 0 0;
     padding: 16px;
     background: #f8fafc;
     border-radius: 8px;
@@ -811,6 +823,11 @@ th{
 
     .successtick {
         font-size: 64px;
+    }
+
+    .error-x {
+        width: 64px;
+        height: 64px;
     }
 
     .successpage .submitbutton {

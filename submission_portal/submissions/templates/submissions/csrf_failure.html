@@ -1,0 +1,19 @@
+{% extends "submissions/base.html" %}
+
+{% block title %}Sorry, please try again{% endblock %}
+
+{% block content %}
+    <div class="successpage">
+        <span class="error-x" aria-hidden="true">
+            <svg viewBox="0 0 88 88" width="88" height="88" focusable="false">
+                <circle cx="44" cy="44" r="38" fill="none" stroke="#dc2626" stroke-width="6"></circle>
+                <path d="M30 30l28 28M58 30L30 58" fill="none" stroke="#dc2626" stroke-width="6" stroke-linecap="round"></path>
+            </svg>
+        </span>
+        <h1 class="successtitle">Sorry, please try again</h1>
+        <div class="success-actions">
+            <a href="{% url 'submit_paper' %}" class="submitbutton">Back to submit</a>
+            <a href="{% url 'check_status' %}" class="submitbutton">Check status</a>
+        </div>
+    </div>
+{% endblock %}
