@@ -144,10 +144,10 @@ Too early and the site can redirect in a loop.
 
 ### `DATABASE_URL`
 
-Leave unset for SQLite (default file: `submission_portal/db.sqlite3`). For Postgres:
+Leave unset for SQLite. To install Postgres and switch the live site, follow **[README.md](README.md) section 6** (not this file). The `.env` line is:
 
 ```env
-DATABASE_URL=postgres://portal:portal@127.0.0.1:5432/portal
+DATABASE_URL=postgres://portal:YOUR_DB_PASSWORD@127.0.0.1:5432/portal
 ```
 
 ---
