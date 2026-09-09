@@ -21,10 +21,6 @@ INDEXED_ON_CHOICES = [
     ('Other', 'Other'),
 ]
 
-ARTICLE_TYPE_VALUES = {value for value, _label in ARTICLE_TYPE_CHOICES}
-INDEXED_ON_VALUES = {value for value, _label in INDEXED_ON_CHOICES}
-
-
 def validate_pdf_file(upload):
     name = (getattr(upload, 'name', '') or '').lower()
     if not name.endswith('.pdf'):
@@ -54,6 +50,8 @@ class SubmissionForm(forms.ModelForm):
     indexed_on = forms.ChoiceField(choices=INDEXED_ON_CHOICES)
     article_type_other = forms.CharField(required=False, max_length=100)
     indexed_on_other = forms.CharField(required=False, max_length=100)
+    doi = forms.CharField(max_length=255)
+    source_of_funding = forms.CharField(max_length=255)
 
     class Meta:
         model = Submission
@@ -64,10 +62,10 @@ class SubmissionForm(forms.ModelForm):
             'author_names',
             'publication_date',
             'doi',
-            'pdf',
             'indexed_on',
             'source_of_funding',
             'affiliations',
+            'pdf',
         ]
 
     def clean_title(self):
@@ -81,6 +79,18 @@ class SubmissionForm(forms.ModelForm):
         if not names:
             raise ValidationError('Enter the author names.')
         return names
+
+    def clean_doi(self):
+        doi = (self.cleaned_data.get('doi') or '').strip()
+        if not doi:
+            raise ValidationError('Enter a DOI.')
+        return doi
+
+    def clean_source_of_funding(self):
+        funding = (self.cleaned_data.get('source_of_funding') or '').strip()
+        if not funding:
+            raise ValidationError('Enter a source of funding.')
+        return funding
 
     def clean_affiliations(self):
         affiliations = (self.cleaned_data.get('affiliations') or '').strip()

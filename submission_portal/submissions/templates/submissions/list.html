@@ -14,6 +14,7 @@
                 {% if can_create_admin %}
                 <a href="{% url 'create_admin' %}" class="addadminbutton"><strong>Add admin</strong></a>
                 {% endif %}
+                <a href="{% url 'download_all_pdfs' %}" class="addadminbutton"><strong>Download all PDFs</strong></a>
                 <form method="post" action="{% url 'admin_logout' %}" class="logout-form">
                     {% csrf_token %}
                     <button type="submit" class="logoutbutton"><strong>Logout</strong></button>
@@ -41,7 +42,7 @@
         </div>
 
         <form method="get" class="searchbar">
-            <input type="text" name="q" value="{{ q }}" placeholder="Search title, author, DOI, or tracking code">
+            <input type="text" name="q" value="{{ q }}" placeholder="Search title, author, or DOI">
             <select name="status">
                 <option value="">All statuses</option>
                 {% for value, label in status_choices %}
@@ -58,33 +59,31 @@
             <table>
                 <thead>
                     <tr>
-                        <th>#</th>
                         <th>Title</th>
-                        <th>Tracking code</th>
                         <th>Article type</th>
-                        <th>Indexed on</th>
-                        <th>Status</th>
+                        <th>Number of authors</th>
+                        <th>Publication date</th>
+                        <th>DOI</th>
+                        <th>Indexed source</th>
+                        <th>Source of funding</th>
                         <th class="viewcell">Actions</th>
                     </tr>
                 </thead>
                 <tbody>
                     {% for paper in submissions %}
                     <tr>
-                        <td>{{ forloop.counter }}</td>
                         <td class="bold">{{ paper.title }}</td>
-                        <td class="tracking-cell">{{ paper.tracking_code }}</td>
                         <td>{{ paper.article_type }}</td>
+                        <td>{{ paper.author_number }}</td>
+                        <td>{{ paper.publication_date }}</td>
+                        <td>{{ paper.doi }}</td>
                         <td><span class="badge">{{ paper.indexed_on }}</span></td>
-                        <td>
-                            <span class="statusbadge status-{{ paper.status }}">
-                                {{ paper.get_status_display }}
-                            </span>
-                        </td>
+                        <td>{{ paper.source_of_funding }}</td>
                         <td class="viewcell"><a href="{% url 'submission_detail' paper.id %}" class="viewbutton">View</a></td>
                     </tr>
                     {% empty %}
                     <tr>
-                        <td colspan="7" class="emptysubmissions">No submissions</td>
+                        <td colspan="8" class="emptysubmissions">No submissions</td>
                     </tr>
                     {% endfor %}
                 </tbody>

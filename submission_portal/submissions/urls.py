@@ -16,9 +16,9 @@ urlpatterns = [
     *page('login/', views.admin_login, 'admin_login'),
     *page('logout/', views.admin_logout, 'admin_logout'),
     *page('dashboard/', views.submission_list, 'submission_list'),
+    *page('dashboard/pdfs/', views.download_all_pdfs, 'download_all_pdfs'),
     *page('dashboard/detail/<int:pk>/', views.submission_detail, 'submission_detail'),
     *page('dashboard/detail/<int:pk>/pdf/', views.download_pdf, 'download_pdf'),
     *page('dashboard/admins/create/', views.create_admin, 'create_admin'),
     *page('submitted/', views.submit_success, 'submit_success'),
-    *page('status/', views.check_status, 'check_status'),
 ]

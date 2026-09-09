@@ -78,36 +78,13 @@ input, select, textarea, button {
     margin: 0;
     color: #4b5563;
 }
-.status-note {
-    max-width: 1100px;
-    margin: 18px auto 0;
-    padding: 0 8px;
-    color: #1e3a8a;
-    line-height: 1.45;
+.required {
+    color: #dc2626;
 }
 .field-error {
     margin: 8px 0 0;
     color: #991b1b;
     font-size: 14px;
-}
-.saved-codes {
-    margin-top: 22px;
-    text-align: left;
-}
-.saved-codes ul {
-    margin: 8px 0 0;
-    padding-left: 18px;
-}
-.saved-codes li {
-    margin: 6px 0;
-}
-.page-nav {
-    margin: 22px 0 0;
-    text-align: center;
-}
-.page-nav a {
-    color: #1d4ed8;
-    font-weight: 600;
 }
 .pagination {
     display: flex;
@@ -124,12 +101,6 @@ input, select, textarea, button {
 .logout-form {
     margin: 0;
     display: inline;
-}
-.status-note a,
-.tracking-hint a {
-    color: #1d4ed8;
-    font-weight: 600;
-    word-break: break-all;
 }
 .form-grid {
     display: grid;
@@ -380,40 +351,6 @@ th{
     padding: 12px 24px;
 }
 
-.tracking-box {
-    margin: 0 0 28px;
-    padding: 16px;
-    background: #f8fafc;
-    border-radius: 8px;
-}
-
-.tracking-label {
-    margin: 0 0 8px;
-    font-size: 14px;
-    font-weight: 600;
-    color: #4b5563;
-}
-
-.tracking-code {
-    margin: 0 0 8px;
-    font-family: ui-monospace, Consolas, monospace;
-    font-size: 28px;
-    font-weight: 700;
-    letter-spacing: 0.08em;
-    color: #111827;
-}
-
-.tracking-hint {
-    margin: 0;
-    font-size: 14px;
-    color: #4b5563;
-    line-height: 1.45;
-}
-
-.tracking-hint + .tracking-hint {
-    margin-top: 10px;
-}
-
 .success-actions {
     display: flex;
     flex-wrap: wrap;
@@ -431,44 +368,6 @@ th{
     border: 1px solid #3b82f6;
 }
 
-.status-intro {
-    margin: 0 0 18px;
-    color: #4b5563;
-    line-height: 1.45;
-}
-
-.status-result {
-    margin-top: 24px;
-    padding: 16px;
-    background: #f8fafc;
-    border-radius: 8px;
-    text-align: center;
-}
-
-.status-result-title {
-    margin: 0 0 10px;
-    font-weight: 700;
-    color: #111827;
-}
-
-.status-nav {
-    margin: 18px 0 0;
-    text-align: center;
-    font-size: 14px;
-}
-
-.status-nav a {
-    color: #3b82f6;
-    font-weight: 600;
-    text-decoration: none;
-}
-
-.tracking-cell,
-.tracking-code-inline {
-    font-family: ui-monospace, Consolas, monospace;
-    font-weight: 600;
-    letter-spacing: 0.04em;
-}
 .viewbutton {
     width: 100px;
     padding: 12px;
@@ -521,6 +420,7 @@ th{
     text-decoration: none;
     font-weight: 600;
     border-radius: 6px;
+    white-space: nowrap;
 }
 
 .searchbar {
@@ -768,7 +668,7 @@ th{
     }
 
     table {
-        min-width: 760px;
+        min-width: 1080px;
     }
 
     th, td {
@@ -837,10 +737,6 @@ th{
 
     .success-actions {
         flex-direction: column;
-    }
-
-    .tracking-code {
-        font-size: 22px;
     }
 }
 

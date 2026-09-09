@@ -11,8 +11,8 @@ You do **not** edit Django Python, templates, or CSS for a domain. The code alre
 | Path | Why you leave it alone |
 |------|------------------------|
 | `submission_portal/submission_portal/settings.py` | Already reads `.env`. Do not paste a secret key or domain here. |
-| `submission_portal/submissions/templates/` | No hardcoded laptop URLs. The status link is built from the visitor’s host. |
-| `submission_portal/submissions/views.py` | `status_page_url()` uses the current request (or `PUBLIC_BASE_URL` if you set one). |
+| `submission_portal/submissions/templates/` | No hardcoded laptop URLs. |
+| `submission_portal/submissions/views.py` | Reads request host and `.env` settings. |
 | `submission_portal/submissions/static/` | CSS and fonts. `collectstatic` copies them on the server. |
 | `README.md` | Laptop URLs stay as `127.0.0.1` on purpose. |
 
@@ -28,7 +28,6 @@ No trailing slash.
 |---|---|---|
 | Domain only | `papers.example.com` | |
 | Full site URL | `https://papers.example.com` | |
-| Status page | `https://papers.example.com/status/` | |
 
 If you only have a server IP, use that IP in place of the domain, and `http://` until HTTPS works.
 
@@ -122,16 +121,6 @@ DJANGO_CSRF_TRUSTED_ORIGINS=http://papers.example.com
 
 Wrong: a host with no scheme. Forms will fail CSRF.
 
-### `PUBLIC_BASE_URL`
-
-Leave **empty** so the “check status” URL matches the host the visitor opened.
-
-Set it only if a proxy makes Django see the wrong host and you need one canonical URL:
-
-```env
-PUBLIC_BASE_URL=https://papers.example.com
-```
-
 ### `DJANGO_SECURE_SSL`
 
 Add **only after** HTTPS (Certbot) works:
@@ -176,14 +165,12 @@ DJANGO_SECRET_KEY=your-new-random-key
 DJANGO_DEBUG=false
 DJANGO_ALLOWED_HOSTS=papers.example.com
 DJANGO_CSRF_TRUSTED_ORIGINS=https://papers.example.com
-PUBLIC_BASE_URL=
 DJANGO_SECURE_SSL=true
 ```
 
 | Visitor wants | URL |
 |---------------|-----|
 | Submit | `https://papers.example.com/` |
-| Status | `https://papers.example.com/status/` |
 | First admin | `https://papers.example.com/setup/` |
 | Login | `https://papers.example.com/login/` |
 | Dashboard | `https://papers.example.com/dashboard/` |

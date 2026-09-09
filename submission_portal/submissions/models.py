@@ -1,25 +1,9 @@
-import secrets
 import uuid
 from pathlib import Path
 
 from django.conf import settings
 from django.core.validators import FileExtensionValidator, MinValueValidator
-from django.db import IntegrityError, models, transaction
-
-
-TRACKING_CODE_ALPHABET = 'ABCDEFGHJKMNPQRSTUVWXYZ23456789'
-
-
-def generate_tracking_code():
-    body = ''.join(secrets.choice(TRACKING_CODE_ALPHABET) for _ in range(6))
-    return f'RS-{body}'
-
-
-def normalize_tracking_code(raw):
-    code = (raw or '').strip().upper().replace(' ', '')
-    if code.startswith('RS') and not code.startswith('RS-') and len(code) > 2:
-        code = 'RS-' + code[2:]
-    return code
+from django.db import models
 
 
 def pdf_upload_to(instance, filename):
@@ -42,16 +26,15 @@ class Submission(models.Model):
     author_number = models.IntegerField(default=1, validators=[MinValueValidator(1)])
     author_names = models.TextField()
     publication_date = models.DateField()
-    doi = models.CharField(max_length=255, blank=True, null=True)
+    doi = models.CharField(max_length=255)
     pdf = models.FileField(
         upload_to=pdf_upload_to,
         validators=[FileExtensionValidator(allowed_extensions=['pdf'])],
     )
     indexed_on = models.CharField(max_length=100)
-    source_of_funding = models.CharField(max_length=255, blank=True, null=True)
+    source_of_funding = models.CharField(max_length=255)
     affiliations = models.CharField(max_length=255)
     status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='pending')
-    tracking_code = models.CharField(max_length=16, unique=True)
     reviewed_by = models.ForeignKey(
         settings.AUTH_USER_MODEL,
         null=True,
@@ -67,21 +50,6 @@ class Submission(models.Model):
             models.Index(fields=['status'], name='submission_status_idx'),
             models.Index(fields=['created_at'], name='submission_created_idx'),
         ]
-
-    def save(self, *args, **kwargs):
-        if self.tracking_code:
-            return super().save(*args, **kwargs)
-
-        last_error = None
-        for _ in range(20):
-            self.tracking_code = generate_tracking_code()
-            try:
-                with transaction.atomic():
-                    return super().save(*args, **kwargs)
-            except IntegrityError as exc:
-                last_error = exc
-                self.tracking_code = ''
-        raise RuntimeError('Could not generate a unique tracking code.') from last_error
 
     def __str__(self):
         return self.title

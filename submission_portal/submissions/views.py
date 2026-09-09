@@ -1,4 +1,6 @@
+import io
 import os
+import zipfile
 from functools import wraps
 
 from django.conf import settings
@@ -8,22 +10,21 @@ from django.contrib.auth.password_validation import validate_password
 from django.core.exceptions import ValidationError
 from django.core.paginator import Paginator
 from django.db.models import Count, Q
-from django.http import FileResponse, Http404, JsonResponse
+from django.http import FileResponse, Http404, HttpResponse, JsonResponse
 from django.middleware.csrf import get_token
 from django.shortcuts import get_object_or_404, redirect, render
-from django.urls import reverse
 from django.utils import timezone
 from django.utils.http import url_has_allowed_host_and_scheme
+from django.utils.text import slugify
 from django.views.decorators.cache import never_cache
 from django.views.decorators.csrf import ensure_csrf_cookie
 from django.views.decorators.http import require_GET, require_POST
 
-from .forms import SubmissionForm, SubmissionStatusForm, value_or_other  # noqa: F401
-from .models import Submission, normalize_tracking_code
+from .forms import SubmissionForm, SubmissionStatusForm
+from .models import Submission
 from .ratelimit import rate_limit
 
 
-SESSION_LAST_CODE = 'last_tracking_code'
 SESSION_LAST_TITLE = 'last_submission_title'
 
 
@@ -52,20 +53,6 @@ def staff_required(view):
     return wrapped
 
 
-def status_page_url(request):
-    path = reverse('check_status')
-    current = request.build_absolute_uri(path)
-    override = (getattr(settings, 'PUBLIC_BASE_URL', '') or '').rstrip('/')
-    if not override:
-        return current
-    host = request.get_host()
-    if ('127.0.0.1' in override or 'localhost' in override) and (
-        '127.0.0.1' not in host and 'localhost' not in host
-    ):
-        return current
-    return f'{override}{path}'
-
-
 def safe_next_url(request):
     candidate = request.POST.get('next') or request.GET.get('next')
     if candidate and url_has_allowed_host_and_scheme(
@@ -77,8 +64,7 @@ def safe_next_url(request):
     return None
 
 
-def remember_tracking_code(request, code, title):
-    request.session[SESSION_LAST_CODE] = code
+def remember_submission_title(request, title):
     request.session[SESSION_LAST_TITLE] = title
     request.session.modified = True
 
@@ -90,6 +76,17 @@ def field_value(form, name, default=''):
     return default if value is None else value
 
 
+def zip_pdf_name(submission, used):
+    slug = slugify(submission.title) or 'submission'
+    name = f'{submission.pk}-{slug}.pdf'
+    index = 2
+    while name in used:
+        name = f'{submission.pk}-{slug}-{index}.pdf'
+        index += 1
+    used.add(name)
+    return name
+
+
 @never_cache
 @ensure_csrf_cookie
 def submit_paper(request):
@@ -97,14 +94,13 @@ def submit_paper(request):
         form = SubmissionForm(request.POST, request.FILES)
         if form.is_valid():
             submission = form.save()
-            remember_tracking_code(request, submission.tracking_code, submission.title)
+            remember_submission_title(request, submission.title)
             return redirect('submit_success')
     else:
         form = SubmissionForm()
 
     return render(request, 'submissions/submit.html', {
         'form': form,
-        'status_check_url': status_page_url(request),
         'title_value': field_value(form, 'title'),
         'article_type_value': field_value(form, 'article_type'),
         'article_type_other_value': field_value(form, 'article_type_other'),
@@ -121,42 +117,10 @@ def submit_paper(request):
 
 @never_cache
 def submit_success(request):
-    tracking_code = request.session.get(SESSION_LAST_CODE)
     title = request.session.get(SESSION_LAST_TITLE)
     return render(request, 'submissions/submitted.html', {
-        'missing': not tracking_code,
         'title': title,
-        'tracking_code': tracking_code,
-        'status_check_url': status_page_url(request),
     })
-
-
-@never_cache
-@ensure_csrf_cookie
-@rate_limit('status', settings.STATUS_RATE_LIMIT, settings.STATUS_RATE_WINDOW)
-def check_status(request):
-    submission = None
-    error = None
-    tracking_code = ''
-    rate_limited = getattr(request, 'rate_limited', False)
-
-    if request.method == 'POST' and rate_limited:
-        error = 'Too many attempts. Wait a minute and try again.'
-        tracking_code = normalize_tracking_code(request.POST.get('tracking_code'))
-    elif request.method == 'POST':
-        tracking_code = normalize_tracking_code(request.POST.get('tracking_code'))
-        if not tracking_code:
-            error = 'Enter your tracking code.'
-        else:
-            submission = Submission.objects.filter(tracking_code=tracking_code).first()
-            if submission is None:
-                error = 'No submission found for that code.'
-
-    return render(request, 'submissions/status.html', {
-        'submission': submission,
-        'error': error,
-        'tracking_code': tracking_code,
-    }, status=429 if rate_limited else 200)
 
 
 @never_cache
@@ -268,13 +232,12 @@ def submission_list(request):
     q = request.GET.get('q', '').strip()
     status = request.GET.get('status', '').strip()
 
-    submissions = Submission.objects.all().order_by('pk')
+    submissions = Submission.objects.all().order_by('-created_at', '-pk')
     if q:
         submissions = submissions.filter(
             Q(title__icontains=q) |
             Q(author_names__icontains=q) |
-            Q(doi__icontains=q) |
-            Q(tracking_code__icontains=q)
+            Q(doi__icontains=q)
         )
     if status in Submission.STATUS_VALUES:
         submissions = submissions.filter(status=status)
@@ -309,8 +272,6 @@ def submission_detail(request, pk):
         Submission.objects.select_related('reviewed_by'),
         pk=pk,
     )
-    form = SubmissionStatusForm(instance=submission)
-
     if request.method == 'POST':
         form = SubmissionStatusForm(request.POST, instance=submission)
         if form.is_valid():
@@ -322,7 +283,6 @@ def submission_detail(request, pk):
 
     return render(request, 'submissions/detail.html', {
         'submission': submission,
-        'form': form,
         'status_choices': Submission.STATUS_CHOICES,
     })
 
@@ -340,6 +300,26 @@ def download_pdf(request, pk):
     )
 
 
+@staff_required
+def download_all_pdfs(request):
+    buffer = io.BytesIO()
+    used_names = set()
+    with zipfile.ZipFile(buffer, 'w', zipfile.ZIP_DEFLATED) as archive:
+        for submission in Submission.objects.exclude(pdf='').order_by('-created_at', '-pk'):
+            if not submission.pdf:
+                continue
+            try:
+                with submission.pdf.open('rb') as pdf_file:
+                    content = pdf_file.read()
+            except (FileNotFoundError, OSError, ValueError):
+                continue
+            archive.writestr(zip_pdf_name(submission, used_names), content)
+    buffer.seek(0)
+    response = HttpResponse(buffer.getvalue(), content_type='application/zip')
+    response['Content-Disposition'] = 'attachment; filename="all-submissions-pdfs.zip"'
+    return response
+
+
 @never_cache
 @require_GET
 def csrf_token_json(request):
@@ -347,6 +327,4 @@ def csrf_token_json(request):
 
 
 def csrf_failure(request, reason='', exception=None):
-    return render(request, 'submissions/csrf_failure.html', {
-        'reason': reason,
-    })
+    return render(request, 'submissions/csrf_failure.html')

@@ -61,27 +61,13 @@
                 </div>
 
                 <div class="form-group">
-                    <label><i class="fa-solid fa-link"></i> 6. DOI (Digital Object Identifier)</label>
-                    <input type="text" name="doi" value="{{ doi_value }}" placeholder="Enter DOI (e.g. 10.1234/example.doi)">
+                    <label><i class="fa-solid fa-link"></i> 6. DOI (Digital Object Identifier) <span class="required">*</span></label>
+                    <input type="text" name="doi" value="{{ doi_value }}" placeholder="Enter DOI (e.g. 10.1234/example.doi)" required>
                     {% if form.doi.errors %}<p class="field-error">{{ form.doi.errors.0 }}</p>{% endif %}
                 </div>
 
                 <div class="form-group">
-                    <label><i class="fa-solid fa-cloud-arrow-up"></i> 7. Upload PDF <span class="required">*</span></label>
-                    <div class="droparea" id="droparea">
-                        <input type="file" name="pdf" id="pdfInput" accept=".pdf" required>
-                        <div class="dropcontent">
-                            <span>Enter your PDF here by</span><br><br>
-                            <button type="button" class="pdfbutton" onclick="document.getElementById('pdfInput').click()">Choosing File</button><br><br>
-                            <small>Only PDF files are allowed.</small>
-                            <span id="pdfFilename" class="pdf-filename"></span>
-                        </div>
-                    </div>
-                    {% if form.pdf.errors %}<p class="field-error">{{ form.pdf.errors.0 }}</p>{% endif %}
-                </div>
-
-                <div class="form-group">
-                    <label><i class="fa-solid fa-globe"></i> 8. Indexed On <span class="required">*</span></label>
+                    <label><i class="fa-solid fa-globe"></i> 7. Indexed On <span class="required">*</span></label>
                     <select name="indexed_on" id="indexed_on" required>
                         <option value="" disabled {% if not indexed_on_value %}selected{% endif %}>Select indexing source</option>
                         <option value="Scopus" {% if indexed_on_value == 'Scopus' %}selected{% endif %}>Scopus</option>
@@ -96,22 +82,35 @@
                 </div>
 
                 <div class="form-group">
-                    <label><i class="fa-solid fa-dollar-sign"></i> 9. Source of Funding</label>
-                    <input type="text" name="source_of_funding" value="{{ source_of_funding_value }}" placeholder="Enter source of funding">
+                    <label><i class="fa-solid fa-dollar-sign"></i> 8. Source of Funding <span class="required">*</span></label>
+                    <input type="text" name="source_of_funding" value="{{ source_of_funding_value }}" placeholder="Enter source of funding" required>
                     {% if form.source_of_funding.errors %}<p class="field-error">{{ form.source_of_funding.errors.0 }}</p>{% endif %}
                 </div>
 
                 <div class="form-group">
-                    <label><i class="fa-solid fa-building-columns"></i> 10. Affiliation <span class="required">*</span></label>
+                    <label><i class="fa-solid fa-building-columns"></i> 9. Affiliation <span class="required">*</span></label>
                     <input type="text" name="affiliations" value="{{ affiliations_value }}" placeholder="Enter affiliation (e.g. University, Department, Institution)" required>
                     {% if form.affiliations.errors %}<p class="field-error">{{ form.affiliations.errors.0 }}</p>{% endif %}
+                </div>
+
+                <div class="form-group">
+                    <label><i class="fa-solid fa-cloud-arrow-up"></i> 10. Upload PDF <span class="required">*</span></label>
+                    <div class="droparea" id="droparea">
+                        <input type="file" name="pdf" id="pdfInput" accept=".pdf" required>
+                        <div class="dropcontent">
+                            <span>Enter your PDF here by</span><br><br>
+                            <button type="button" class="pdfbutton" onclick="document.getElementById('pdfInput').click()">Choosing File</button><br><br>
+                            <small>Only PDF files are allowed.</small>
+                            <span id="pdfFilename" class="pdf-filename"></span>
+                        </div>
+                    </div>
+                    {% if form.pdf.errors %}<p class="field-error">{{ form.pdf.errors.0 }}</p>{% endif %}
                 </div>
             </div>
 
             <button type="submit" class="submitbutton"><i class="fa-solid fa-paper-plane"></i> SUBMIT</button>
         </form>
     </div>
-    <p class="status-note">You can check the status of your paper at <a href="{% url 'check_status' %}">{{ status_check_url }}</a>.</p>
 {% endblock %}
 
 {% block extra_js %}

@@ -108,14 +108,11 @@ Open **http://127.0.0.1:8000/**
 | Page | Laptop URL |
 |------|------------|
 | Submit a paper | http://127.0.0.1:8000/ |
-| Check status | http://127.0.0.1:8000/status/ |
 | First admin | http://127.0.0.1:8000/setup/ |
 | Admin login | http://127.0.0.1:8000/login/ |
 | Review dashboard | http://127.0.0.1:8000/dashboard/ |
 
-After you submit a paper, write down the **tracking code** (for example `RS-8F3K2P`). The status URL sits under the form card. Open `/status/` and enter that code. `/submitted/` shows only the latest code from this browser. The status page does not store codes. If the code is lost, an admin can look it up. There is no email resend.
-
-`/setup/` works only while no admin exists. After that, sign in at `/login/`. Only the first admin can open **Add admin**.
+After you submit a paper, `/submitted/` confirms that it was received. `/setup/` works only while no admin exists. After that, sign in at `/login/`. Only the first admin can open **Add admin**. From the dashboard you can open a submission, change its review status, and download PDFs (one at a time or all at once).
 
 On the submit form, **Type of article** and **Indexed on** include **Other**.
 
@@ -148,11 +145,11 @@ Then start at section 1. Use this repository (`submissionv2`).
 
 | Who | What they do |
 |-----|----------------|
-| Author | Opens `/`, submits a PDF, writes down the tracking code, later checks `/status/` |
+| Author | Opens `/` and submits a PDF |
 | First admin | Opens `/setup/` once, then `/login/` and `/dashboard/` to review papers |
 | Later admins | Created from the dashboard **Add admin** button (first admin only) |
 
-On a live domain the same paths are `https://your-domain/`, `/status/`, `/setup/`, `/login/`, `/dashboard/`. The values that make Django accept that domain are in **[setup.md](setup.md)**. The commands to install Nginx, Gunicorn, and Postgres stay in this file.
+On a live domain the same paths are `https://your-domain/`, `/setup/`, `/login/`, `/dashboard/`. The values that make Django accept that domain are in **[setup.md](setup.md)**. The commands to install Nginx, Gunicorn, and Postgres stay in this file.
 
 ---
 
@@ -213,7 +210,7 @@ python -c "from django.core.management.utils import get_random_secret_key; print
 nano .env
 ```
 
-Paste the generated key into `DJANGO_SECRET_KEY`. Set the domain keys exactly as **[setup.md](setup.md)** lists (`DEBUG=false`, `ALLOWED_HOSTS`, `CSRF_TRUSTED_ORIGINS`, leave `PUBLIC_BASE_URL` empty). Leave `DATABASE_URL` commented to stay on SQLite, or finish section 6 before the first `migrate` if you want Postgres from day one. Save (`Ctrl+O`, Enter, `Ctrl+X`).
+Paste the generated key into `DJANGO_SECRET_KEY`. Set the domain keys exactly as **[setup.md](setup.md)** lists (`DEBUG=false`, `ALLOWED_HOSTS`, `CSRF_TRUSTED_ORIGINS`). Leave `DATABASE_URL` commented to stay on SQLite, or finish section 6 before the first `migrate` if you want Postgres from day one. Save (`Ctrl+O`, Enter, `Ctrl+X`).
 
 Once `.env` is complete and contains the secret key, delete the leftover file:
 
@@ -352,7 +349,6 @@ sudo systemctl restart submission-portal
 | App | `sudo systemctl status submission-portal` |
 | Nginx | `sudo systemctl status nginx` |
 | Submit | `https://papers.example.com/` |
-| Status | `https://papers.example.com/status/` |
 | First admin | `https://papers.example.com/setup/` |
 | Login | `https://papers.example.com/login/` |
 

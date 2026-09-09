@@ -102,9 +102,6 @@ CSRF_TRUSTED_ORIGINS = _csv(
     'http://127.0.0.1:8000,http://localhost:8000',
 )
 
-# Empty by default so the visible status URL matches the request host.
-PUBLIC_BASE_URL = os.environ.get('PUBLIC_BASE_URL', '').rstrip('/')
-
 LOGIN_URL = 'admin_login'
 LOGIN_REDIRECT_URL = 'submission_list'
 CSRF_FAILURE_VIEW = 'submissions.views.csrf_failure'
@@ -121,8 +118,6 @@ DATA_UPLOAD_MAX_NUMBER_FIELDS = 200
 MAX_PDF_BYTES = 20 * 1024 * 1024
 LOGIN_RATE_LIMIT = 5
 LOGIN_RATE_WINDOW = 60
-STATUS_RATE_LIMIT = 10
-STATUS_RATE_WINDOW = 60
 DASHBOARD_PAGE_SIZE = 25
 
 

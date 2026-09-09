@@ -1,10 +1,8 @@
-import importlib.util
 import tempfile
 from datetime import date
-from pathlib import Path
-from unittest.mock import patch
+from io import BytesIO
+from zipfile import ZipFile
 
-from django.apps import apps
 from django.contrib.auth.models import User
 from django.core.cache import cache
 from django.core.files.uploadedfile import SimpleUploadedFile
@@ -12,20 +10,7 @@ from django.test import Client, TestCase, override_settings
 from django.urls import reverse
 
 from submissions.forms import value_or_other
-
-
-def load_fill_tracking_codes():
-    path = Path(__file__).resolve().parent / 'migrations' / '0004_submission_tracking_code.py'
-    spec = importlib.util.spec_from_file_location('tracking_code_migration', path)
-    module = importlib.util.module_from_spec(spec)
-    spec.loader.exec_module(module)
-    return module.fill_tracking_codes
-from submissions.models import (
-    TRACKING_CODE_ALPHABET,
-    Submission,
-    generate_tracking_code,
-    normalize_tracking_code,
-)
+from submissions.models import Submission
 
 
 PDF_BYTES = b'%PDF-1.4\n1 0 obj\n<<>>\nendobj\ntrailer\n<<>>\n%%EOF\n'
@@ -62,80 +47,20 @@ def submission_payload(**overrides):
     return data
 
 
-@override_settings(MEDIA_ROOT=tempfile.mkdtemp())
-class TrackingCodeTests(TestCase):
-    def test_generate_tracking_code_format(self):
-        code = generate_tracking_code()
-        self.assertTrue(code.startswith('RS-'))
-        self.assertEqual(len(code), 9)
-        self.assertTrue(all(char in TRACKING_CODE_ALPHABET for char in code[3:]))
-
-    def test_normalize_tracking_code(self):
-        self.assertEqual(normalize_tracking_code(' rs 8f3k2p '), 'RS-8F3K2P')
-        self.assertEqual(normalize_tracking_code('RS-8F3K2P'), 'RS-8F3K2P')
-        self.assertEqual(normalize_tracking_code(''), '')
-
-    def test_save_assigns_unique_code(self):
-        first = Submission.objects.create(
-            title='One',
-            article_type='Review article',
-            author_names='Ada',
-            publication_date=date(2026, 1, 1),
-            indexed_on='Scopus',
-            affiliations='Uni',
-            pdf=make_pdf('one.pdf'),
-        )
-        second = Submission.objects.create(
-            title='Two',
-            article_type='Review article',
-            author_names='Ada',
-            publication_date=date(2026, 1, 1),
-            indexed_on='Scopus',
-            affiliations='Uni',
-            pdf=make_pdf('two.pdf'),
-        )
-        self.assertTrue(first.tracking_code.startswith('RS-'))
-        self.assertTrue(second.tracking_code.startswith('RS-'))
-        self.assertNotEqual(first.tracking_code, second.tracking_code)
-
-    def test_save_retries_on_integrity_error(self):
-        existing = Submission.objects.create(
-            title='Existing',
-            article_type='Review article',
-            author_names='Ada',
-            publication_date=date(2026, 1, 1),
-            indexed_on='Scopus',
-            affiliations='Uni',
-            pdf=make_pdf('existing.pdf'),
-        )
-        codes = [existing.tracking_code, existing.tracking_code, 'RS-NEWID1']
-        with patch('submissions.models.generate_tracking_code', side_effect=codes):
-            created = Submission.objects.create(
-                title='Retry',
-                article_type='Review article',
-                author_names='Ada',
-                publication_date=date(2026, 1, 1),
-                indexed_on='Scopus',
-                affiliations='Uni',
-                pdf=make_pdf('retry.pdf'),
-            )
-        self.assertEqual(created.tracking_code, 'RS-NEWID1')
-
-    def test_fill_tracking_codes_backfills_empty_values(self):
-        submission = Submission.objects.create(
-            title='Backfill',
-            article_type='Review article',
-            author_names='Ada',
-            publication_date=date(2026, 1, 1),
-            indexed_on='Scopus',
-            affiliations='Uni',
-            pdf=make_pdf('backfill.pdf'),
-        )
-        Submission.objects.filter(pk=submission.pk).update(tracking_code='')
-        load_fill_tracking_codes()(apps, None)
-        submission.refresh_from_db()
-        self.assertTrue(submission.tracking_code.startswith('RS-'))
-        self.assertEqual(len(submission.tracking_code), 9)
+def create_submission(**overrides):
+    values = {
+        'title': 'A study of sample papers',
+        'article_type': 'Review article',
+        'author_names': 'Ada Lovelace',
+        'publication_date': date(2026, 1, 15),
+        'doi': '10.1234/example',
+        'indexed_on': 'Scopus',
+        'source_of_funding': 'Grant',
+        'affiliations': 'Example University',
+        'pdf': make_pdf(),
+    }
+    values.update(overrides)
+    return Submission.objects.create(**values)
 
 
 class HelperTests(TestCase):
@@ -147,7 +72,7 @@ class HelperTests(TestCase):
 
 
 @override_settings(MEDIA_ROOT=tempfile.mkdtemp())
-class SubmitAndStatusTests(TestCase):
+class SubmitTests(TestCase):
     def setUp(self):
         cache.clear()
 
@@ -161,7 +86,6 @@ class SubmitAndStatusTests(TestCase):
         self.assertEqual(Submission.objects.count(), 1)
         submission = Submission.objects.get()
         self.assertEqual(submission.status, 'pending')
-        self.assertTrue(submission.tracking_code.startswith('RS-'))
         self.assertTrue(submission.pdf.name.startswith('submissions_pdfs/'))
         self.assertTrue(submission.pdf.name.endswith('.pdf'))
         self.assertNotIn('paper.pdf', submission.pdf.name)
@@ -173,51 +97,33 @@ class SubmitAndStatusTests(TestCase):
         )
         submission = Submission.objects.get()
         success = self.client.get(reverse('submit_success'))
-        self.assertContains(success, submission.tracking_code)
+        self.assertContains(success, submission.title)
         self.assertEqual(self.client.get(f'/submitted/{submission.pk}/').status_code, 404)
 
-    def test_success_page_without_session_does_not_leak_code(self):
-        Submission.objects.create(
-            title='Secret paper',
-            article_type='Review article',
-            author_names='Ada',
-            publication_date=date(2026, 1, 1),
-            indexed_on='Scopus',
-            affiliations='Uni',
-            pdf=make_pdf('secret.pdf'),
-        )
+    def test_success_page_without_session_does_not_leak_title(self):
+        create_submission(title='Secret paper', pdf=make_pdf('secret.pdf'))
         other = self.client.get(reverse('submit_success'))
-        self.assertContains(other, 'Confirmation unavailable')
+        self.assertContains(other, 'Submitted successfully')
         self.assertNotContains(other, 'Secret paper')
 
-    def test_status_lookup(self):
-        submission = Submission.objects.create(
-            title='Lookup paper',
-            article_type='Review article',
-            author_names='Ada',
-            publication_date=date(2026, 1, 1),
-            indexed_on='Scopus',
-            affiliations='Uni',
-            pdf=make_pdf('lookup.pdf'),
+    def test_required_fields_are_rejected_when_blank(self):
+        response = self.client.post(
+            reverse('submit_paper'),
+            data={**submission_payload(doi='', source_of_funding=''), 'pdf': make_pdf()},
         )
-        missing = self.client.post(reverse('check_status'), {'tracking_code': 'RS-XXXXXX'})
-        self.assertContains(missing, 'No submission found for that code.')
-        found = self.client.post(reverse('check_status'), {'tracking_code': submission.tracking_code})
-        self.assertContains(found, 'Lookup paper')
-        self.assertContains(found, 'Pending')
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(Submission.objects.count(), 0)
+        self.assertContains(response, 'Please correct the errors below.')
 
-    def test_status_page_rate_limit(self):
-        for _ in range(10):
-            response = self.client.post(reverse('check_status'), {'tracking_code': 'RS-XXXXXX'})
-            self.assertEqual(response.status_code, 200)
-        limited = self.client.post(reverse('check_status'), {'tracking_code': 'RS-XXXXXX'})
-        self.assertEqual(limited.status_code, 429)
-        self.assertContains(limited, 'Too many attempts', status_code=429)
-
-    def test_status_page_has_no_submit_link(self):
-        response = self.client.get(reverse('check_status'))
-        self.assertNotContains(response, 'Submit a paper')
-        self.assertNotContains(response, 'page-nav')
+    def test_form_fields_are_numbered_and_required(self):
+        html = self.client.get(reverse('submit_paper')).content.decode()
+        self.assertIn('1. Title of the Paper', html)
+        self.assertIn('7. Indexed On', html)
+        self.assertIn('8. Source of Funding', html)
+        self.assertIn('9. Affiliation', html)
+        self.assertIn('10. Upload PDF', html)
+        self.assertEqual(html.count('class="required"'), 10)
+        self.assertNotIn('check the status', html.lower())
 
     def test_invalid_date_does_not_500(self):
         response = self.client.post(
@@ -239,32 +145,15 @@ class SubmitAndStatusTests(TestCase):
         self.assertContains(response, 'not a valid PDF')
 
     def test_media_url_is_not_public(self):
-        submission = Submission.objects.create(
-            title='Private PDF',
-            article_type='Review article',
-            author_names='Ada',
-            publication_date=date(2026, 1, 1),
-            indexed_on='Scopus',
-            affiliations='Uni',
-            pdf=make_pdf('private.pdf'),
-        )
+        submission = create_submission(title='Private PDF', pdf=make_pdf('private.pdf'))
         self.assertEqual(self.client.get(f'/media/{submission.pdf.name}').status_code, 404)
         pdf = self.client.get(reverse('download_pdf', args=[submission.pk]))
         self.assertEqual(pdf.status_code, 200)
         self.assertContains(pdf, 'Admin login')
 
-    def test_status_url_follows_request_host(self):
-        response = self.client.get(reverse('submit_paper'), HTTP_HOST='127.0.0.1:8000')
-        self.assertContains(response, 'http://127.0.0.1:8000/status/')
-
-    def test_status_url_sits_outside_form_card(self):
-        html = self.client.get(reverse('submit_paper')).content.decode()
-        form_end = html.find('</form>')
-        card_end = html.find('</div>', form_end)
-        note = html.find('class="status-note"')
-        self.assertGreater(form_end, 0)
-        self.assertGreater(note, card_end)
-        self.assertNotContains(self.client.get(reverse('submit_paper')), 'Submit a paper')
+    def test_status_page_is_gone(self):
+        self.assertEqual(self.client.get('/status/').status_code, 404)
+        self.assertEqual(self.client.get('/status').status_code, 404)
 
 
 class AuthTests(TestCase):
@@ -339,15 +228,7 @@ class ReviewAuditTests(TestCase):
     def setUp(self):
         self.admin = User.objects.create_superuser('firstadmin', '', 'StrongPass123')
         self.client.force_login(self.admin)
-        self.submission = Submission.objects.create(
-            title='Audit paper',
-            article_type='Review article',
-            author_names='Ada',
-            publication_date=date(2026, 1, 1),
-            indexed_on='Scopus',
-            affiliations='Uni',
-            pdf=make_pdf('audit.pdf'),
-        )
+        self.submission = create_submission(title='Audit paper', pdf=make_pdf('audit.pdf'))
 
     def test_status_change_records_reviewer(self):
         response = self.client.post(
@@ -365,17 +246,48 @@ class ReviewAuditTests(TestCase):
         self.assertContains(response, 'Submitted:')
         html = response.content.decode()
         submitted = html.find('Submitted:')
-        tracking = html.find('Tracking code:')
         pdf = html.find('View/Download the PDF')
         status = html.find('class="statusform"')
-        self.assertLess(submitted, tracking)
-        self.assertLess(tracking, pdf)
+        self.assertLess(submitted, pdf)
         self.assertLess(pdf, status)
+        self.assertNotContains(response, 'Tracking code')
 
     def test_staff_can_download_pdf(self):
         response = self.client.get(reverse('download_pdf', args=[self.submission.pk]))
         self.assertEqual(response.status_code, 200)
         self.assertEqual(response['Content-Type'], 'application/pdf')
+
+    def test_list_shows_latest_first_with_overview_columns(self):
+        create_submission(title='Older paper', pdf=make_pdf('older.pdf'))
+        newer = create_submission(title='Newer paper', pdf=make_pdf('newer.pdf'))
+        response = self.client.get(reverse('submission_list'))
+        html = response.content.decode()
+        self.assertLess(html.find('Newer paper'), html.find('Older paper'))
+        self.assertContains(response, 'Article type')
+        self.assertContains(response, 'Number of authors')
+        self.assertContains(response, 'Publication date')
+        self.assertContains(response, 'DOI')
+        self.assertContains(response, 'Indexed source')
+        self.assertContains(response, 'Source of funding')
+        self.assertContains(response, 'Download all PDFs')
+        self.assertNotContains(response, 'Tracking code')
+        self.assertEqual(newer.pk, Submission.objects.latest('pk').pk)
+
+    def test_staff_can_download_all_pdfs(self):
+        create_submission(title='Second paper', pdf=make_pdf('second.pdf'))
+        response = self.client.get(reverse('download_all_pdfs'))
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response['Content-Type'], 'application/zip')
+        with ZipFile(BytesIO(response.content)) as archive:
+            names = archive.namelist()
+        self.assertEqual(len(names), 2)
+        self.assertTrue(all(name.endswith('.pdf') for name in names))
+
+    def test_anonymous_cannot_download_all_pdfs(self):
+        self.client.logout()
+        response = self.client.get(reverse('download_all_pdfs'))
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, 'Admin login')
 
 
 @override_settings(MEDIA_ROOT=tempfile.mkdtemp())
@@ -418,15 +330,20 @@ class StressAndCsrfTests(TestCase):
         self.assertContains(locked, 'Setup is closed')
 
     def test_csrf_failure_is_a_usable_page(self):
-        self.csrf_client.get(reverse('check_status'))
+        self.csrf_client.get(reverse('submit_paper'))
         response = self.csrf_client.post(
-            reverse('check_status'),
-            {'tracking_code': 'RS-XXXXXX', 'csrfmiddlewaretoken': 'not-a-real-token'},
+            reverse('submit_paper'),
+            {
+                **submission_payload(),
+                'csrfmiddlewaretoken': 'not-a-real-token',
+                'pdf': make_pdf(),
+            },
         )
         self.assertEqual(response.status_code, 200)
         self.assertContains(response, 'Sorry, please try again')
         self.assertContains(response, 'error-x')
         self.assertNotContains(response, 'CSRF verification failed')
+        self.assertNotContains(response, 'Check status')
         self.assertNotIn(response.status_code, {303, 403})
 
     def test_form_pages_are_not_cached(self):
@@ -454,7 +371,7 @@ class StressAndCsrfTests(TestCase):
 
     def test_login_does_not_break_later_posts_when_token_is_refreshed(self):
         User.objects.create_superuser('firstadmin', '', 'StrongPass123')
-        stale_page = self.csrf_client.get(reverse('check_status'))
+        stale_page = self.csrf_client.get(reverse('submit_paper'))
         stale_token = csrf_token_from(stale_page)
         login_page = self.csrf_client.get(reverse('admin_login'))
         login_response = self.csrf_client.post(reverse('admin_login'), {
@@ -464,17 +381,18 @@ class StressAndCsrfTests(TestCase):
         })
         self.assertEqual(login_response.status_code, 302)
 
-        stale_post = self.csrf_client.post(reverse('check_status'), {
-            'tracking_code': 'RS-XXXXXX',
+        stale_post = self.csrf_client.post(reverse('submit_paper'), {
+            **submission_payload(title='Stale token paper'),
             'csrfmiddlewaretoken': stale_token,
+            'pdf': make_pdf('stale.pdf'),
         })
         self.assertEqual(stale_post.status_code, 200)
         self.assertContains(stale_post, 'Sorry, please try again')
 
         fresh = self.csrf_client.get(reverse('csrf_token')).json()['csrfToken']
-        ok_post = self.csrf_client.post(reverse('check_status'), {
-            'tracking_code': 'RS-XXXXXX',
+        ok_post = self.csrf_client.post(reverse('submit_paper'), {
+            **submission_payload(title='Fresh token paper'),
             'csrfmiddlewaretoken': fresh,
+            'pdf': make_pdf('fresh.pdf'),
         })
-        self.assertEqual(ok_post.status_code, 200)
-        self.assertContains(ok_post, 'No submission found')
+        self.assertEqual(ok_post.status_code, 302)

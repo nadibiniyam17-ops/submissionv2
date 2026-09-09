@@ -9,22 +9,12 @@
 
 {% block content %}
     <div class="successpage">
-        {% if missing %}
-            <h1 class="successtitle">Confirmation unavailable</h1>
-            <p class="successmessage">The tracking code is only shown in the browser that submitted the paper. If you wrote the code down, enter it on the status page. If it is lost, an admin can look it up.</p>
-            <div class="tracking-box">
-                <p class="tracking-hint">Status page: <a href="{% url 'check_status' %}">{{ status_check_url }}</a></p>
-            </div>
+        <i class="fa-solid fa-circle-check successtick"></i>
+        <h1 class="successtitle">Submitted successfully</h1>
+        {% if title %}
+            <p class="successmessage">Your paper <strong>{{ title }}</strong> has been received.</p>
         {% else %}
-            <i class="fa-solid fa-circle-check successtick"></i>
-            <h1 class="successtitle">Submitted successfully</h1>
-            <p class="successmessage">Your paper <strong>{{ title }}</strong> has been received and is pending review.</p>
-            <div class="tracking-box">
-                <p class="tracking-label">Your tracking code</p>
-                <p class="tracking-code">{{ tracking_code }}</p>
-                <p class="tracking-hint">Write this code down. Enter it at <a href="{% url 'check_status' %}">{{ status_check_url }}</a> to see whether the paper is pending, under review, or reviewed.</p>
-                <p class="tracking-hint">This page shows the latest submission from this browser. Write each code down so the paper's status can be checked</p>
-            </div>
+            <p class="successmessage">Your paper has been received.</p>
         {% endif %}
         <div class="success-actions">
             <a href="{% url 'submit_paper' %}" class="submitbutton">Submit another paper</a>
